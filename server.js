@@ -54,17 +54,27 @@ app.post('/new', async (req, res) => {
   }
 
   // Ensure the target directory is writable and ready for git clone
+  // parentDir is where the repository will be created. Many
+  // first-time setups fail because /var/www is missing or owned by root.
   const parentDir = path.dirname(root);
   try {
     // Check that the parent directory exists and is writable
     await fs.promises.access(parentDir, fs.constants.W_OK);
   } catch (err) {
-    // Most common reason for clone failures is lack of permissions
-    return res
-      .status(400)
-      .send(
-        `Cannot write to ${parentDir}. Ensure the directory exists and permissions are correct.`
-      );
+    try {
+      // Attempt to create the directory if it doesn't exist. This helps
+      // beginners who haven't prepared the folder structure yet.
+      await fs.promises.mkdir(parentDir, { recursive: true });
+      await fs.promises.access(parentDir, fs.constants.W_OK);
+    } catch (mkdirErr) {
+      // Provide a command hint so the user can easily fix permissions
+      return res
+        .status(400)
+        .send(
+          `Cannot write to ${parentDir}. Try running:\n` +
+            `sudo mkdir -p ${parentDir} && sudo chown $(whoami):$(whoami) ${parentDir}`
+        );
+    }
   }
 
   try {

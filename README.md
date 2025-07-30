@@ -76,8 +76,27 @@ BlockHead ships with a small utility to assist when moving to a fresh machine.
    node scripts/migrate.js import blockhead-backup.zip
    ```
 
+
 The server can then be started with `node server.js` as usual. Verify that Nginx
 config files are in place and reload Nginx if required.
+
+## Troubleshooting
+
+### "Cannot write to /var/www" error
+
+If you see an error similar to `Cannot write to /var/www. Ensure the directory
+exists and permissions are correct`, it usually means the directory does not
+exist or your user cannot write to it. You can fix this by creating the folder
+and giving yourself ownership:
+
+```bash
+sudo mkdir -p /var/www
+sudo chown $(whoami):$(whoami) /var/www
+```
+
+Running the installation script (`./scripts/install.sh`) performs these steps
+automatically. After adjusting permissions, retry adding the site through the
+web interface.
 
 ## Warning
 
