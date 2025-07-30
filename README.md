@@ -50,6 +50,34 @@ BlockHead is a simple web interface for managing multiple websites on a single s
 7. **Backing up sites**
    - Click `Backup` next to a domain to download a zip archive of the site's files and generated config.
 
+## Migrating to a new server
+
+BlockHead ships with a small utility to assist when moving to a fresh machine.
+
+1. On the **old** server export a full backup:
+
+   ```bash
+   node scripts/migrate.js export blockhead-backup.zip
+   ```
+
+   This archive contains `sites.json`, generated Nginx configs and the content
+   of each site directory.
+
+2. Copy the archive to the **new** server and run the installation script:
+
+   ```bash
+   ./scripts/install.sh
+   ```
+
+3. Import the backup on the new machine:
+
+   ```bash
+   node scripts/migrate.js import blockhead-backup.zip
+   ```
+
+The server can then be started with `node server.js` as usual. Verify that Nginx
+config files are in place and reload Nginx if required.
+
 ## Warning
 
 This project is intended for home lab or educational use. Running arbitrary Git repositories on a public server can be dangerous. Always review code before deploying.
