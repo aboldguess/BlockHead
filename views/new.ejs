@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add New Site</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <h1>Add New Site</h1>
+    <form action="/new" method="post">
+        <label>Domain: <input type="text" name="domain" required></label><br>
+        <label>Git Repository URL: <input type="text" name="repo" required></label><br>
+        <label>Site Root Path: <input type="text" name="root" required></label><br>
+        <button type="submit">Create</button>
+    </form>
+</body>
+</html>

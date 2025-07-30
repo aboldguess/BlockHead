@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BlockHead Manager</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <h1>Website Manager</h1>
+    <a href="/new">Add New Site</a>
+    <table border="1">
+        <tr><th>Domain</th><th>Repository</th><th>Root</th><th>Actions</th></tr>
+        <% sites.forEach(function(site){ %>
+        <tr>
+            <td><%= site.domain %></td>
+            <td><%= site.repo %></td>
+            <td><%= site.root %></td>
+            <td>
+                <form action="/update" method="post" style="display:inline">
+                    <input type="hidden" name="domain" value="<%= site.domain %>" />
+                    <button type="submit">Pull Latest</button>
+                </form>
+                <form action="/delete" method="post" style="display:inline" onsubmit="return confirm('Delete <%= site.domain %>?')">
+                    <input type="hidden" name="domain" value="<%= site.domain %>" />
+                    <button type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+        <% }) %>
+    </table>
+</body>
+</html>
