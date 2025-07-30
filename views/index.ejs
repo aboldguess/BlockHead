@@ -23,6 +23,8 @@
                     <input type="hidden" name="domain" value="<%= site.domain %>" />
                     <button type="submit">Backup</button>
                 </form>
+                <!-- Link to view the generated nginx config -->
+                <a href="/config/<%= site.domain %>" target="_blank">View Config</a>
                 <form action="/delete" method="post" style="display:inline" onsubmit="return confirm('Delete <%= site.domain %>?')">
                     <input type="hidden" name="domain" value="<%= site.domain %>" />
                     <button type="submit">Delete</button>
