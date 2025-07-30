@@ -1,3 +1,15 @@
-body { font-family: Arial, sans-serif; margin: 20px; }
-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-th, td { padding: 8px; }
+/* Basic custom tweaks on top of Bootstrap */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa; /* light gray background */
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th, td {
+  padding: 8px;
+}
