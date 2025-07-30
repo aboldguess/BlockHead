@@ -44,6 +44,8 @@ app.get('/new', (req, res) => {
 // Handle creation of new site
 app.post('/new', async (req, res) => {
   const { domain, repo, root } = req.body;
+  // Log the creation request for debugging purposes
+  console.log(`Creating new site ${domain} from ${repo} into ${root}`);
   const sites = loadSites();
   const existing = sites.find(s => s.domain === domain);
   if (existing) {
@@ -53,6 +55,8 @@ app.post('/new', async (req, res) => {
   // Clone the repository to the desired root directory
   try {
     await simpleGit().clone(repo, root);
+    // Indicate that cloning completed without errors
+    console.log(`Repository cloned successfully for ${domain}`);
   } catch (err) {
     console.error(err);
     return res.send('Error cloning repository');
@@ -71,10 +75,14 @@ app.post('/update', async (req, res) => {
   const sites = loadSites();
   const site = sites.find(s => s.domain === domain);
   if (!site) return res.sendStatus(404);
+  // Notify which site is being updated
+  console.log(`Pulling latest for ${domain}`);
 
   try {
     const git = simpleGit(site.root);
     await git.pull('origin', 'main');
+    // Output result of the pull operation
+    console.log(`Pull complete for ${domain}`);
   } catch (err) {
     console.error(err);
     return res.send('Failed to pull updates');
@@ -88,6 +96,8 @@ app.post('/backup', (req, res) => {
   const sites = loadSites();
   const site = sites.find(s => s.domain === domain);
   if (!site) return res.sendStatus(404);
+  // Inform about upcoming backup operation
+  console.log(`Preparing backup for ${domain}`);
 
   const backupDir = path.join(__dirname, 'backups');
   if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir);
@@ -96,12 +106,16 @@ app.post('/backup', (req, res) => {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const archiveName = `${domain}-${timestamp}.zip`;
   const archivePath = path.join(backupDir, archiveName);
+  // Destination path of the generated backup archive
+  console.log(`Creating backup for ${domain} at ${archivePath}`);
 
   const output = fs.createWriteStream(archivePath);
   const archive = archiver('zip', { zlib: { level: 9 } });
 
   output.on('close', () => {
     // Send the zip file for download once archiving is complete
+    // Backup archive has been successfully created
+    console.log(`Backup created at ${archivePath}`);
     res.download(archivePath, archiveName, err => {
       if (err) console.error(err);
     });
@@ -131,6 +145,8 @@ app.post('/delete', (req, res) => {
   let sites = loadSites();
   sites = sites.filter(s => s.domain !== domain);
   saveSites(sites);
+  // Acknowledge deletion of site configuration
+  console.log(`Removed configuration for ${domain}`);
   res.redirect('/');
 });
 
@@ -140,6 +156,8 @@ function generateNginxConfig(site) {
   const outputDir = path.join(__dirname, 'generated_configs');
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
   fs.writeFileSync(path.join(outputDir, site.domain), config);
+  // Let the operator know the config file was created
+  console.log(`Nginx config generated for ${site.domain}`);
 }
 
 app.listen(PORT, () => {
