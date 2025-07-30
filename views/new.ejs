@@ -22,7 +22,9 @@
         </ol>
         <p class="mb-0">
             After you click <em>Create</em>, BlockHead clones the repository and writes a config file into <code>generated_configs/</code>.
-            Copy that file to <code>/etc/nginx/sites-available</code>, enable it, and reload nginx.
+            Enable the site by running:
+            <code>sudo ./scripts/enable_site.sh your-domain</code>
+            (replace <code>your-domain</code> with your domain name).
         </p>
     </div>
     <form action="/new" method="post" class="mb-3">
