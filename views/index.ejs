@@ -19,6 +19,10 @@
                     <input type="hidden" name="domain" value="<%= site.domain %>" />
                     <button type="submit">Pull Latest</button>
                 </form>
+                <form action="/backup" method="post" style="display:inline">
+                    <input type="hidden" name="domain" value="<%= site.domain %>" />
+                    <button type="submit">Backup</button>
+                </form>
                 <form action="/delete" method="post" style="display:inline" onsubmit="return confirm('Delete <%= site.domain %>?')">
                     <input type="hidden" name="domain" value="<%= site.domain %>" />
                     <button type="submit">Delete</button>

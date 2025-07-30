@@ -8,6 +8,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const simpleGit = require('simple-git');
+const archiver = require('archiver');
 
 const app = express();
 const PORT = 3000; // Change to 80 if running as root for HTTP
@@ -79,6 +80,49 @@ app.post('/update', async (req, res) => {
     return res.send('Failed to pull updates');
   }
   res.redirect('/');
+});
+
+// Create a zip backup of a site's root directory and config
+app.post('/backup', (req, res) => {
+  const { domain } = req.body;
+  const sites = loadSites();
+  const site = sites.find(s => s.domain === domain);
+  if (!site) return res.sendStatus(404);
+
+  const backupDir = path.join(__dirname, 'backups');
+  if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir);
+
+  // Archive name formatted as domain-timestamp.zip
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const archiveName = `${domain}-${timestamp}.zip`;
+  const archivePath = path.join(backupDir, archiveName);
+
+  const output = fs.createWriteStream(archivePath);
+  const archive = archiver('zip', { zlib: { level: 9 } });
+
+  output.on('close', () => {
+    // Send the zip file for download once archiving is complete
+    res.download(archivePath, archiveName, err => {
+      if (err) console.error(err);
+    });
+  });
+
+  archive.on('error', err => {
+    console.error(err);
+    res.sendStatus(500);
+  });
+
+  archive.pipe(output);
+  // Include site root directory contents in the archive
+  archive.directory(site.root, false);
+
+  // Include generated Nginx config if it exists
+  const configPath = path.join(__dirname, 'generated_configs', domain);
+  if (fs.existsSync(configPath)) {
+    archive.file(configPath, { name: `${domain}.nginx` });
+  }
+
+  archive.finalize();
 });
 
 // Delete a site configuration (does not remove files)
