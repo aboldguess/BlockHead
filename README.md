@@ -10,6 +10,7 @@ BlockHead is a simple web interface for managing multiple websites on a single s
 - Generate an Nginx server block configuration for each site
 - Delete site configuration
 - Download a zip backup of any site
+- View the generated Nginx config for each site directly from the web UI
 
 ## Getting Started
 
@@ -49,6 +50,9 @@ BlockHead is a simple web interface for managing multiple websites on a single s
 
 7. **Backing up sites**
    - Click `Backup` next to a domain to download a zip archive of the site's files and generated config.
+
+8. **Viewing configs**
+   - Click `View Config` next to a domain to see the nginx server block that was generated for that site.
 
 ## Migrating to a new server
 

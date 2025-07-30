@@ -91,6 +91,7 @@ app.post('/update', async (req, res) => {
 });
 
 // Create a zip backup of a site's root directory and config
+// Create a downloadable archive of a site's files and nginx config
 app.post('/backup', (req, res) => {
   const { domain } = req.body;
   const sites = loadSites();
@@ -148,6 +149,18 @@ app.post('/delete', (req, res) => {
   // Acknowledge deletion of site configuration
   console.log(`Removed configuration for ${domain}`);
   res.redirect('/');
+});
+
+// Serve the generated nginx config for a specific site
+app.get('/config/:domain', (req, res) => {
+  const { domain } = req.params;
+  const configPath = path.join(__dirname, 'generated_configs', domain);
+  // If the config file doesn't exist, inform the user
+  if (!fs.existsSync(configPath)) {
+    return res.status(404).send('Config not found');
+  }
+  // Display the config as plain text in the browser
+  res.type('text/plain').send(fs.readFileSync(configPath));
 });
 
 // Generate an Nginx server block for a site
