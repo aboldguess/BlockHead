@@ -46,20 +46,42 @@ app.post('/new', async (req, res) => {
   const { domain, repo, root } = req.body;
   // Log the creation request for debugging purposes
   console.log(`Creating new site ${domain} from ${repo} into ${root}`);
+
   const sites = loadSites();
   const existing = sites.find(s => s.domain === domain);
   if (existing) {
     return res.send('Domain already exists');
   }
 
-  // Clone the repository to the desired root directory
+  // Ensure the target directory is writable and ready for git clone
+  const parentDir = path.dirname(root);
   try {
+    // Check that the parent directory exists and is writable
+    await fs.promises.access(parentDir, fs.constants.W_OK);
+  } catch (err) {
+    // Most common reason for clone failures is lack of permissions
+    return res
+      .status(400)
+      .send(
+        `Cannot write to ${parentDir}. Ensure the directory exists and permissions are correct.`
+      );
+  }
+
+  try {
+    // Attempt to clone the repository to the requested path
     await simpleGit().clone(repo, root);
     // Indicate that cloning completed without errors
     console.log(`Repository cloned successfully for ${domain}`);
   } catch (err) {
-    console.error(err);
-    return res.send('Error cloning repository');
+    console.error('Clone error:', err);
+    // Provide a helpful message along with the git error text
+    let message = 'Error cloning repository. ';
+    if (err.message) {
+      message += err.message;
+    }
+    message +=
+      ' Verify the repository URL and that this process has permission to write to the destination.';
+    return res.status(500).send(message);
   }
 
   const site = { domain, repo, root };
