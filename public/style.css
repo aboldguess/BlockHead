@@ -13,3 +13,8 @@ table {
 th, td {
   padding: 8px;
 }
+
+/* Style block for instructional text sections */
+.instructions {
+  font-size: 0.9rem;
+}

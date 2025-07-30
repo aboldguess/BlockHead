@@ -12,6 +12,22 @@
 <body>
     <div class="container my-4">
     <h1 class="mb-4">Website Manager</h1>
+    <!-- Instruction block to clearly explain how this page works -->
+    <div class="alert alert-info instructions">
+        <p class="mb-1"><strong>How to manage your sites:</strong></p>
+        <ul class="mb-0">
+            <li>Click <strong>Add New Site</strong> to register a domain and clone its repository.</li>
+            <li>Use <strong>Pull Latest</strong> to update a site from its Git repository.</li>
+            <li><strong>Backup</strong> downloads a zip containing the site files and nginx config.</li>
+            <li><strong>View Config</strong> shows the generated nginx server block.</li>
+            <li><strong>Delete</strong> only removes the entry here; it does not delete files.</li>
+        </ul>
+        <p class="mt-2">
+            After adding a site, copy the generated config from
+            <code>generated_configs/</code> into your nginx configuration directory
+            and reload nginx to activate the site.
+        </p>
+    </div>
     <a class="btn btn-success mb-3" href="/new">Add New Site</a>
     <table class="table table-bordered table-striped">
         <tr><th>Domain</th><th>Repository</th><th>Root</th><th>Actions</th></tr>
