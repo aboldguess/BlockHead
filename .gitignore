@@ -2,3 +2,4 @@ node_modules/
 server.log
 generated_configs/
 sites.json
+backups/

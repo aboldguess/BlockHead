@@ -9,6 +9,7 @@ BlockHead is a simple web interface for managing multiple websites on a single s
 - Pull the latest changes for a site (assumes `main` branch)
 - Generate an Nginx server block configuration for each site
 - Delete site configuration
+- Download a zip backup of any site
 
 ## Getting Started
 
@@ -45,6 +46,9 @@ BlockHead is a simple web interface for managing multiple websites on a single s
 
 6. **Updating sites**
    - On the main page, click `Pull Latest` next to a domain to run `git pull origin main` in the site's directory.
+
+7. **Backing up sites**
+   - Click `Backup` next to a domain to download a zip archive of the site's files and generated config.
 
 ## Warning
 
