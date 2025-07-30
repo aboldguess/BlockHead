@@ -23,9 +23,9 @@
             <li><strong>Delete</strong> only removes the entry here; it does not delete files.</li>
         </ul>
         <p class="mt-2">
-            After adding a site, copy the generated config from
-            <code>generated_configs/</code> into your nginx configuration directory
-            and reload nginx to activate the site.
+            After adding a site, enable it with the helper script:
+            <code>sudo ./scripts/enable_site.sh your-domain</code>.
+            Replace <code>your-domain</code> with the domain you added.
         </p>
     </div>
     <a class="btn btn-success mb-3" href="/new">Add New Site</a>

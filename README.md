@@ -31,15 +31,11 @@ BlockHead is a simple web interface for managing multiple websites on a single s
    - The app clones the repository and creates a config snippet in `generated_configs/`.
 
 4. **Nginx setup**
-   - Copy the generated config file for each domain to `/etc/nginx/sites-available/`.
-   - Create a symlink in `/etc/nginx/sites-enabled/`:
+   - After creating a site, run the helper script to enable it and reload nginx:
      ```bash
-     sudo ln -s /etc/nginx/sites-available/example.com /etc/nginx/sites-enabled/
+     sudo ./scripts/enable_site.sh example.com
      ```
-   - Reload Nginx:
-     ```bash
-     sudo systemctl reload nginx
-     ```
+     Replace `example.com` with your domain name.
 
 5. **Configure your domain in GoDaddy**
    - Log into GoDaddy and edit the DNS records for your domain.
