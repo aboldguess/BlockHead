@@ -11,6 +11,7 @@ BlockHead is a simple web interface for managing multiple websites on a single s
 - Delete site configuration
 - Download a zip backup of any site
 - View the generated Nginx config for each site directly from the web UI
+- Modern Bootstrap-based interface for easy management
 
 ## Getting Started
 
