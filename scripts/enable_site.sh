@@ -7,6 +7,19 @@
 
 set -e
 
+# Path where nginx stores site configuration files. This mirrors the layout
+# used by Debian-based distributions.
+NGINX_DIR="/etc/nginx"
+
+# Ensure nginx appears to be installed before continuing. We check for the
+# existence of the configuration directory. If it is missing, we cannot safely
+# continue because subsequent commands would fail.
+if [ ! -d "$NGINX_DIR" ]; then
+  echo "Nginx does not appear to be installed (missing $NGINX_DIR)." >&2
+  echo "Run ./scripts/install.sh or install nginx manually before retrying." >&2
+  exit 1
+fi
+
 DOMAIN="$1"
 if [ -z "$DOMAIN" ]; then
   echo "Usage: sudo ./scripts/enable_site.sh <domain>" >&2
@@ -16,6 +29,12 @@ fi
 CONFIG_DIR="$(dirname "$0")/../generated_configs"
 SOURCE="$CONFIG_DIR/$DOMAIN"
 TARGET="/etc/nginx/sites-available/$DOMAIN"
+
+# Ensure the sites-available and sites-enabled directories exist. They may be
+# missing on a minimal install or if nginx was installed from scratch without
+# default configuration. Creating them here avoids errors when copying and
+# symlinking configuration files.
+sudo mkdir -p "/etc/nginx/sites-available" "/etc/nginx/sites-enabled"
 
 # Ensure the config file exists before attempting to copy
 if [ ! -f "$SOURCE" ]; then
