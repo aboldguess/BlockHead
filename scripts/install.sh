@@ -8,8 +8,8 @@ set -e
 # Update package index
 sudo apt-get update
 
-# Install system packages
-sudo apt-get install -y nodejs npm nginx git
+# Install system packages. NodeSource's nodejs already includes npm.
+sudo apt-get install -y nodejs nginx git
 
 # Install Node.js dependencies for BlockHead
 npm install
