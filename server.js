@@ -14,6 +14,11 @@ const app = express();
 const PORT = 3000; // Change to 80 if running as root for HTTP
 const DATA_FILE = path.join(__dirname, 'sites.json');
 
+// IP address of the server used for the "View via IP" link. This can
+// be overridden with the SERVER_IP environment variable so it matches
+// your machine's public address.
+const SERVER_IP = process.env.SERVER_IP || '193.237.136.211';
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
@@ -33,7 +38,8 @@ function saveSites(sites) {
 // List all configured sites
 app.get('/', (req, res) => {
   const sites = loadSites();
-  res.render('index', { sites });
+  // Pass the server IP so the template can build the "View via IP" links
+  res.render('index', { sites, serverIp: SERVER_IP });
 });
 
 // Show form to create new site

@@ -16,16 +16,23 @@
     <div class="alert alert-info instructions">
         <p class="mb-1"><strong>How to manage your sites:</strong></p>
         <ul class="mb-0">
-            <li>Click <strong>Add New Site</strong> to register a domain and clone its repository.</li>
-            <li>Use <strong>Pull Latest</strong> to update a site from its Git repository.</li>
-            <li><strong>Backup</strong> downloads a zip containing the site files and nginx config.</li>
-            <li><strong>View Config</strong> shows the generated nginx server block.</li>
-            <li><strong>Delete</strong> only removes the entry here; it does not delete files.</li>
+            <li><strong>Add New Site</strong> &ndash; register a domain and clone its repository.</li>
+            <li><strong>Pull Latest</strong> &ndash; fetch updates from the site's Git repository.</li>
+            <li><strong>Backup</strong> &ndash; download a zip of the site files and nginx config.</li>
+            <li><strong>View Config</strong> &ndash; open the generated nginx server block.</li>
+            <li><strong>View via IP</strong> &ndash; open the site using the server IP (<%= serverIp %>).</li>
+            <li><strong>View Site</strong> &ndash; open the site using its domain name.</li>
+            <li><strong>Delete</strong> &ndash; remove the entry here (does not delete files).</li>
         </ul>
         <p class="mt-2">
             After adding a site, enable it with the helper script:
             <code>sudo ./scripts/enable_site.sh your-domain</code>.
             Replace <code>your-domain</code> with the domain you added.
+        </p>
+        <p class="mb-0">
+            Next, log in to GoDaddy and edit the DNS records for your domain.
+            Create an <strong>A record</strong> pointing to <code><%= serverIp %></code>.
+            Once DNS has propagated you can view the site using the buttons below.
         </p>
     </div>
     <a class="btn btn-success mb-3" href="/new">Add New Site</a>
@@ -47,6 +54,10 @@
                 </form>
                 <!-- Link to view the generated nginx config -->
                 <a class="btn btn-info btn-sm" href="/config/<%= site.domain %>" target="_blank">View Config</a>
+                <!-- Open the site via the server's IP address -->
+                <a class="btn btn-outline-success btn-sm" href="http://<%= serverIp %>" target="_blank">View via IP</a>
+                <!-- Open the site using its domain name -->
+                <a class="btn btn-success btn-sm" href="http://<%= site.domain %>" target="_blank">View Site</a>
                 <form action="/delete" method="post" style="display:inline" onsubmit="return confirm('Delete <%= site.domain %>?')">
                     <input type="hidden" name="domain" value="<%= site.domain %>" />
                     <button type="submit" class="btn btn-danger btn-sm">Delete</button>
