@@ -251,6 +251,25 @@ app.post('/new', async (req, res) => {
   }
 
   try {
+    // If the target clone directory already exists, ensure it's empty.
+    // Git will refuse to clone into a non-empty folder, so we warn early.
+    if (fs.existsSync(root)) {
+      const files = await fs.promises.readdir(root);
+      if (files.length > 0) {
+        return res
+          .status(400)
+          .send(
+            `Destination ${root} already exists and is not empty. ` +
+              `Remove it or choose a different path.`
+          );
+      }
+    }
+  } catch (statErr) {
+    // Provide details if we can't read the target directory
+    return res.status(500).send(`Failed to access ${root}: ${statErr.message}`);
+  }
+
+  try {
     // Attempt to clone the repository to the requested path
     await simpleGit().clone(repo, root);
     // Indicate that cloning completed without errors
@@ -276,6 +295,15 @@ app.post('/new', async (req, res) => {
     let message = 'Error cloning repository. ';
     if (err.message) {
       message += err.message;
+    }
+    // Special case: git already exists error is common for beginners
+    if (err.message && err.message.includes('already exists and is not an empty')) {
+      return res
+        .status(400)
+        .send(
+          `Destination ${root} already exists and is not empty. ` +
+            `Remove it or pick another directory.`
+        );
     }
     message +=
       ' Verify the repository URL and that this process has permission to write to the destination.';
