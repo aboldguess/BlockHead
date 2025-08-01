@@ -19,6 +19,32 @@ const app = express();
 const PORT = 3000; // Change to 80 if running as root for HTTP
 const DATA_FILE = path.join(__dirname, 'sites.json');
 
+// --------------------------------------
+// Simple in-memory log store used by the
+// Advanced console panel in the UI. Each
+// log entry captures the level, message
+// and timestamp. The last 200 entries are
+// kept in memory.
+// --------------------------------------
+const logs = [];
+const origLog = console.log;
+const origError = console.error;
+
+// Override console methods so that every
+// call is recorded for later viewing via
+// the /logs endpoint.
+console.log = (...args) => {
+  origLog(...args);
+  logs.push({ level: 'log', message: args.join(' '), time: new Date().toISOString() });
+  if (logs.length > 200) logs.shift();
+};
+
+console.error = (...args) => {
+  origError(...args);
+  logs.push({ level: 'error', message: args.join(' '), time: new Date().toISOString() });
+  if (logs.length > 200) logs.shift();
+};
+
 // Determine the IP address used for the "View via IP" links. If the
 // SERVER_IP environment variable is set it takes precedence. Otherwise
 // we try to detect a non-internal IPv4 address so the user sees the
@@ -42,6 +68,12 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Endpoint used by the front-end advanced panel
+// to retrieve recent log messages as JSON.
+app.get('/logs', (req, res) => {
+  res.json(logs);
+});
 
 // Utility function to load site data from JSON file
 function loadSites() {
