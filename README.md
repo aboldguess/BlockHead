@@ -31,6 +31,7 @@ For a detailed walkthrough see the in-app help page at `/help` once the server i
    - Click `Add New Site`
    - Provide the domain (e.g., `example.com`), the Git repo URL, and the directory where the site should live on disk.
    - The app clones the repository and creates a config snippet in `generated_configs/`.
+   - If the project contains a `package.json`, BlockHead automatically runs `npm install` and then starts the app using `npm start`.
 
 4. **Nginx setup**
    - After creating a site, run the helper script to enable it and reload nginx:
@@ -46,6 +47,7 @@ For a detailed walkthrough see the in-app help page at `/help` once the server i
 
 6. **Updating sites**
    - On the main page, click `Pull Latest` next to a domain to run `git pull origin main` in the site's directory.
+   - If the site is a Node.js project, dependencies are reinstalled and the `npm start` script runs again automatically.
 
 7. **Backing up sites**
    - Click `Backup` next to a domain to download a zip archive of the site's files and generated config.

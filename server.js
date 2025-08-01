@@ -10,7 +10,9 @@ const fs = require('fs');
 const simpleGit = require('simple-git');
 const archiver = require('archiver');
 const http = require('http');
-const { exec } = require('child_process');
+// exec runs one-off shell commands while spawn is used below for
+// background processes such as starting an app server
+const { exec, spawn } = require('child_process');
 const os = require('os');
 
 const app = express();
@@ -50,6 +52,33 @@ function loadSites() {
 // Utility function to save site data to JSON file
 function saveSites(sites) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(sites, null, 2));
+}
+
+// Run a shell command and return a promise that resolves when it completes.
+// Output is logged so the user can troubleshoot install/start failures.
+function runCommand(cmd, cwd) {
+  return new Promise((resolve, reject) => {
+    exec(cmd, { cwd }, (err, stdout, stderr) => {
+      if (err) {
+        console.error(`Command failed: ${cmd}\n${stderr}`);
+        reject(err);
+      } else {
+        if (stdout) console.log(stdout.trim());
+        resolve();
+      }
+    });
+  });
+}
+
+// Start an application using the standard "npm start" script in detached mode.
+// The process continues running independently of this Node server.
+function startApp(cwd) {
+  const child = spawn('npm', ['start'], {
+    cwd,
+    detached: true,
+    stdio: 'ignore',
+  });
+  child.unref();
 }
 
 // Diagnostic test: check if a site is reachable and properly configured
@@ -150,6 +179,21 @@ app.post('/new', async (req, res) => {
     await simpleGit().clone(repo, root);
     // Indicate that cloning completed without errors
     console.log(`Repository cloned successfully for ${domain}`);
+
+    // If the cloned project has a package.json, try to install its
+    // dependencies and launch the app automatically. This assumes the
+    // project defines a standard "start" script.
+    const pkgPath = path.join(root, 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      console.log(`Installing dependencies for ${domain}`);
+      try {
+        await runCommand('npm install', root);
+        console.log(`Starting application for ${domain}`);
+        startApp(root);
+      } catch (installErr) {
+        console.error('Automatic start failed:', installErr);
+      }
+    }
   } catch (err) {
     console.error('Clone error:', err);
     // Provide a helpful message along with the git error text
@@ -183,6 +227,15 @@ app.post('/update', async (req, res) => {
     await git.pull('origin', 'main');
     // Output result of the pull operation
     console.log(`Pull complete for ${domain}`);
+
+    // If a Node.js app is detected, reinstall dependencies (in case package.json
+    // changed) and restart the application using the same helper used when
+    // cloning. This keeps the running app up to date with minimal effort.
+    if (fs.existsSync(path.join(site.root, 'package.json')))
+    {
+      await runCommand('npm install', site.root);
+      startApp(site.root);
+    }
   } catch (err) {
     console.error(err);
     return res.send('Failed to pull updates');
