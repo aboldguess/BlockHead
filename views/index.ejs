@@ -23,6 +23,7 @@
             <li><strong>View via IP</strong> &ndash; open the site using the server IP (<%= serverIp %>).</li>
             <li><strong>View Site</strong> &ndash; open the site using its domain name.</li>
             <li><strong>Delete</strong> &ndash; remove the entry here (does not delete files).</li>
+            <li><strong>Run/Stop</strong> &ndash; run a custom command for the site, e.g. <code>npm start</code>, and stop it when needed.</li>
         </ul>
         <p class="mt-2">
             After adding a site, enable it with the helper script:
@@ -34,6 +35,7 @@
             Create an <strong>A record</strong> pointing to <code><%= serverIp %></code>.
             Once DNS has propagated you can view the site using the buttons below.
         </p>
+        <p class="mb-0">To start a site manually, enter a command such as <code>npm start</code> and press <em>Run</em>. Use <em>Stop</em> to terminate it.</p>
     </div>
     <a class="btn btn-success mb-3" href="/new">Add New Site</a>
     <!-- Quick link to the comprehensive help page -->
@@ -78,6 +80,15 @@
                 <form action="/delete" method="post" style="display:inline" onsubmit="return confirm('Delete <%= site.domain %>?')">
                     <input type="hidden" name="domain" value="<%= site.domain %>" />
                     <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+                <form action="/run" method="post" class="run-form mt-1 d-inline">
+                    <input type="hidden" name="domain" value="<%= site.domain %>" />
+                    <input type="text" name="cmd" placeholder="command" class="form-control form-control-sm" />
+                    <button type="submit" class="btn btn-success btn-sm">Run</button>
+                </form>
+                <form action="/stop" method="post" class="mt-1 d-inline">
+                    <input type="hidden" name="domain" value="<%= site.domain %>" />
+                    <button type="submit" class="btn btn-warning btn-sm">Stop</button>
                 </form>
             </td>
         </tr>
