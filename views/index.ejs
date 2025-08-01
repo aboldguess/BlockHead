@@ -16,7 +16,7 @@
     <div class="alert alert-info instructions">
         <p class="mb-1"><strong>How to manage your sites:</strong></p>
         <ul class="mb-0">
-            <li><strong>Add New Site</strong> &ndash; register a domain and clone its repository.</li>
+            <li><strong>Add New Site</strong> &ndash; register a domain and clone its repository. Specify the port if the app is dynamic.</li>
             <li><strong>Pull Latest</strong> &ndash; fetch updates from the site's Git repository.</li>
             <li><strong>Backup</strong> &ndash; download a zip of the site files and nginx config.</li>
             <li><strong>View Config</strong> &ndash; open the generated nginx server block.</li>
@@ -46,6 +46,7 @@
             <th>Domain</th>
             <th>Repository</th>
             <th>Root</th>
+            <th>Port</th>
             <th>Status</th>
             <th>Actions</th>
         </tr>
@@ -54,6 +55,7 @@
             <td><%= site.domain %></td>
             <td><%= site.repo %></td>
             <td><%= site.root %></td>
+            <td><%= site.port || '' %></td>
             <td>
                 <span class="status-dot <%= site.status.level %>" title="<%= site.status.message %>"></span>
                 <% if (site.status.level !== 'ok') { %>

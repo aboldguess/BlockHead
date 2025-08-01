@@ -43,6 +43,12 @@
                 <input class="form-control" type="text" name="root" required>
             </label>
         </div>
+        <div class="mb-3">
+            <label class="form-label">Application Port
+                <input class="form-control" type="number" name="port" value="<%= defaultPort %>" />
+                <div class="form-text">If your app runs on a specific port (e.g. <code>3001</code>), enter it here. Leave blank for a static site.</div>
+            </label>
+        </div>
         <button type="submit" class="btn btn-primary">Create</button>
     </form>
     <!-- Easy navigation back to the site list -->

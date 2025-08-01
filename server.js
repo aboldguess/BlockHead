@@ -108,9 +108,15 @@ function runCommand(cmd, cwd) {
 
 // Start an application using the standard "npm start" script in detached mode.
 // The process continues running independently of this Node server.
-function startApp(cwd) {
+function startApp(cwd, port) {
+  // Pass the PORT environment variable when a port is provided so
+  // frameworks that rely on process.env.PORT (like Express) pick it up.
+  const env = { ...process.env };
+  if (port) env.PORT = port;
+
   const child = spawn('npm', ['start'], {
     cwd,
+    env,
     detached: true,
     stdio: 'ignore',
   });
@@ -209,16 +215,22 @@ app.get('/help', (req, res) => {
   res.render('help');
 });
 
-// Show form to create new site
+// Show form to create new site. The server suggests the next available port
+// starting at 3001 so users don't have to pick one manually.
 app.get('/new', (req, res) => {
-  res.render('new');
+  const sites = loadSites();
+  const used = sites.map(s => Number(s.port)).filter(Boolean);
+  let port = 3001;
+  while (used.includes(port)) port++;
+  console.log(`Suggested port ${port} for new site form`);
+  res.render('new', { defaultPort: port });
 });
 
 // Handle creation of new site
 app.post('/new', async (req, res) => {
-  const { domain, repo, root } = req.body;
+  const { domain, repo, root, port } = req.body;
   // Log the creation request for debugging purposes
-  console.log(`Creating new site ${domain} from ${repo} into ${root}`);
+  console.log(`Creating new site ${domain} from ${repo} into ${root} on port ${port}`);
 
   const sites = loadSites();
   const existing = sites.find(s => s.domain === domain);
@@ -283,8 +295,8 @@ app.post('/new', async (req, res) => {
       console.log(`Installing dependencies for ${domain}`);
       try {
         await runCommand('npm install', root);
-        console.log(`Starting application for ${domain}`);
-        startApp(root);
+        console.log(`Starting application for ${domain} on port ${port}`);
+        startApp(root, port);
       } catch (installErr) {
         console.error('Automatic start failed:', installErr);
       }
@@ -311,6 +323,7 @@ app.post('/new', async (req, res) => {
   }
 
   const site = { domain, repo, root };
+  if (port) site.port = Number(port);
   sites.push(site);
   saveSites(sites);
   generateNginxConfig(site);
@@ -340,7 +353,8 @@ app.post('/update', async (req, res) => {
     if (fs.existsSync(path.join(site.root, 'package.json')))
     {
       await runCommand('npm install', site.root);
-      startApp(site.root);
+      console.log(`Restarting application for ${domain} on port ${site.port}`);
+      startApp(site.root, site.port);
     }
   } catch (err) {
     console.error(err);
@@ -459,12 +473,19 @@ app.get('/config/:domain', (req, res) => {
 
 // Generate an Nginx server block for a site
 function generateNginxConfig(site) {
-  const config = `server {\n  listen 80;\n  server_name ${site.domain};\n  root ${site.root};\n  index index.html index.htm;\n  location / {\n    try_files $uri $uri/ =404;\n  }\n}`;
+  let config;
+  if (site.port) {
+    // Proxy dynamic applications running on a port
+    config = `server {\n  listen 80;\n  server_name ${site.domain};\n  location / {\n    proxy_pass http://127.0.0.1:${site.port};\n    proxy_set_header Host $host;\n    proxy_set_header X-Real-IP $remote_addr;\n  }\n}`;
+  } else {
+    // Simple static site configuration
+    config = `server {\n  listen 80;\n  server_name ${site.domain};\n  root ${site.root};\n  index index.html index.htm;\n  location / {\n    try_files $uri $uri/ =404;\n  }\n}`;
+  }
   const outputDir = path.join(__dirname, 'generated_configs');
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
   fs.writeFileSync(path.join(outputDir, site.domain), config);
   // Let the operator know the config file was created
-  console.log(`Nginx config generated for ${site.domain}`);
+  console.log(`Nginx config generated for ${site.domain} (port ${site.port || 'static'})`);
 }
 
 app.listen(PORT, () => {
