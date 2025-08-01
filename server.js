@@ -120,6 +120,11 @@ function startApp(cwd, port) {
     detached: true,
     stdio: 'ignore',
   });
+  // Log failures that occur when spawning the process so the
+  // user can diagnose missing binaries or permission issues.
+  child.on('error', (err) => {
+    console.error(`Failed to start npm app in ${cwd}: ${err.message}`);
+  });
   child.unref();
 }
 
@@ -152,6 +157,11 @@ function runSiteCommand(domain, cmd, cwd, port) {
     env,
     detached: true,
     stdio: 'ignore',
+  });
+  // Surface spawn errors such as missing executables. Without this
+  // feedback it can appear as if the process simply never started.
+  child.on('error', (err) => {
+    console.error(`Failed to start command "${cmd}" for ${domain}: ${err.message}`);
   });
   child.unref();
   // Track the process so it can be terminated later via /stop
