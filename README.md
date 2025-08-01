@@ -30,6 +30,7 @@ For a detailed walkthrough see the in-app help page at `/help` once the server i
 3. **Add your first site**
    - Click `Add New Site`
    - Provide the domain (e.g., `example.com`), the Git repo URL, and the directory where the site should live on disk.
+   - If the app listens on a specific port (e.g., `3001`), enter it in the **Application Port** field.
    - The app clones the repository and creates a config snippet in `generated_configs/`.
    - If the project contains a `package.json`, BlockHead automatically runs `npm install` and then starts the app using `npm start`.
 
