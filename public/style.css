@@ -39,3 +39,12 @@ th, td {
 .status-dot.error {
   background-color: #dc3545; /* red */
 }
+
+/* Console log panel styles */
+#log-panel {
+  background-color: #fdfdfd;
+  border: 1px solid #ccc;
+}
+#logs {
+  font-size: 0.8rem;
+}

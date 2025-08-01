@@ -1,0 +1,25 @@
+<div class="container mt-4">
+  <button id="toggle-logs" class="btn btn-sm btn-secondary">Advanced</button>
+  <div id="log-panel" class="mt-2" style="display:none;">
+    <pre id="logs" class="bg-light p-2" style="height:150px; overflow:auto;"></pre>
+  </div>
+</div>
+<script>
+// Toggle log panel visibility and fetch log data on demand
+const btn = document.getElementById('toggle-logs');
+const panel = document.getElementById('log-panel');
+const logPre = document.getElementById('logs');
+btn.addEventListener('click', () => {
+  if (panel.style.display === 'none') {
+    fetch('/logs')
+      .then(res => res.json())
+      .then(data => {
+        // Join log entries into a single text block
+        logPre.textContent = data.map(l => `[${l.time}] ${l.message}`).join('\n');
+        panel.style.display = 'block';
+      });
+  } else {
+    panel.style.display = 'none';
+  }
+});
+</script>
