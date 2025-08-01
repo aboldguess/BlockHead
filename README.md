@@ -12,6 +12,7 @@ BlockHead is a simple web interface for managing multiple websites on a single s
 - Download a zip backup of any site
 - View the generated Nginx config for each site directly from the web UI
 - Modern Bootstrap-based interface for easy management
+- Diagnostic status checks displayed as traffic light indicators
 
 ## Getting Started
 
@@ -97,6 +98,18 @@ sudo chown $(whoami):$(whoami) /var/www
 Running the installation script (`./scripts/install.sh`) performs these steps
 automatically. After adjusting permissions, retry adding the site through the
 web interface.
+
+### Site shows as down
+
+The main page now includes a traffic light indicator for each domain. If a site
+appears in red or yellow, click the **Fix** button or run the helper script
+
+```bash
+sudo ./scripts/fix_site.sh your-domain
+```
+
+This copies the generated config into `/etc/nginx`, enables the site and
+reloads nginx.
 
 ## Warning
 

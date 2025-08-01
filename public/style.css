@@ -18,3 +18,24 @@ th, td {
 .instructions {
   font-size: 0.9rem;
 }
+
+/* Small traffic light indicators used for site status */
+.status-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+.status-dot.ok {
+  background-color: #28a745; /* green */
+}
+
+.status-dot.warning {
+  background-color: #ffc107; /* yellow */
+}
+
+.status-dot.error {
+  background-color: #dc3545; /* red */
+}
