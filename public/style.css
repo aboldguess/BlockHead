@@ -48,3 +48,10 @@ th, td {
 #logs {
   font-size: 0.8rem;
 }
+
+/* Make the small command input fit nicely inline with buttons */
+.run-form input[type="text"] {
+  width: 140px;
+  display: inline-block;
+  margin-right: 4px;
+}

@@ -45,6 +45,10 @@ console.error = (...args) => {
   if (logs.length > 200) logs.shift();
 };
 
+// Keep track of child processes started via the Run button. Each domain maps
+// to a spawned process so we can terminate it later using the Stop button.
+const runningProcs = {};
+
 // Determine the IP address used for the "View via IP" links. If the
 // SERVER_IP environment variable is set it takes precedence. Otherwise
 // we try to detect a non-internal IPv4 address so the user sees the
@@ -111,6 +115,32 @@ function startApp(cwd) {
     stdio: 'ignore',
   });
   child.unref();
+}
+
+// Spawn a custom command for a site. The command string is split by spaces to
+// form the executable and its arguments. The resulting child process is stored
+// so it can be terminated later.
+function runSiteCommand(domain, cmd, cwd) {
+  const [exe, ...args] = cmd.split(' ');
+  const child = spawn(exe, args, { cwd, detached: true, stdio: 'ignore' });
+  child.unref();
+  runningProcs[domain] = child;
+  console.log(`Started "${cmd}" for ${domain} (pid ${child.pid})`);
+}
+
+// Stop a running command previously started via runSiteCommand. If the process
+// is found, kill its process group so any children are also terminated.
+function stopSiteCommand(domain) {
+  const child = runningProcs[domain];
+  if (child) {
+    try {
+      process.kill(-child.pid);
+      console.log(`Stopped command for ${domain}`);
+    } catch (err) {
+      console.error('Failed to stop process:', err);
+    }
+    delete runningProcs[domain];
+  }
 }
 
 // Diagnostic test: check if a site is reachable and properly configured
@@ -349,6 +379,26 @@ app.post('/fix', (req, res) => {
     }
     res.redirect('/');
   });
+});
+
+// Run a custom command for a site. The command text is provided by the user via
+// the Run button on the main page. The process is started in detached mode so
+// it continues running after the request finishes.
+app.post('/run', (req, res) => {
+  const { domain, cmd } = req.body;
+  if (!domain || !cmd) return res.redirect('/');
+  const sites = loadSites();
+  const site = sites.find(s => s.domain === domain);
+  if (!site) return res.redirect('/');
+  runSiteCommand(domain, cmd, site.root);
+  res.redirect('/');
+});
+
+// Stop a running command started via the Run button.
+app.post('/stop', (req, res) => {
+  const { domain } = req.body;
+  if (domain) stopSiteCommand(domain);
+  res.redirect('/');
 });
 
 // Serve the generated nginx config for a specific site
