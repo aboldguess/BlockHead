@@ -140,10 +140,21 @@ function enableSite(domain) {
 // Spawn a custom command for a site. The command string is split by spaces to
 // form the executable and its arguments. The resulting child process is stored
 // so it can be terminated later.
-function runSiteCommand(domain, cmd, cwd) {
+function runSiteCommand(domain, cmd, cwd, port) {
   const [exe, ...args] = cmd.split(' ');
-  const child = spawn(exe, args, { cwd, detached: true, stdio: 'ignore' });
+  // Preserve the existing environment but inject PORT if provided so
+  // scripts that rely on process.env.PORT still work.
+  const env = { ...process.env };
+  if (port) env.PORT = port;
+
+  const child = spawn(exe, args, {
+    cwd,
+    env,
+    detached: true,
+    stdio: 'ignore',
+  });
   child.unref();
+  // Track the process so it can be terminated later via /stop
   runningProcs[domain] = child;
   console.log(`Started "${cmd}" for ${domain} (pid ${child.pid})`);
 }
@@ -228,7 +239,7 @@ app.get('/new', (req, res) => {
 
 // Handle creation of new site
 app.post('/new', async (req, res) => {
-  const { domain, repo, root, port } = req.body;
+  const { domain, repo, root, port, cmd } = req.body;
   // Log the creation request for debugging purposes
   console.log(`Creating new site ${domain} from ${repo} into ${root} on port ${port}`);
 
@@ -295,11 +306,18 @@ app.post('/new', async (req, res) => {
       console.log(`Installing dependencies for ${domain}`);
       try {
         await runCommand('npm install', root);
-        console.log(`Starting application for ${domain} on port ${port}`);
-        startApp(root, port);
       } catch (installErr) {
-        console.error('Automatic start failed:', installErr);
+        console.error('Install failed:', installErr);
       }
+    }
+
+    if (cmd) {
+      console.log(`Starting ${domain} with custom command: ${cmd}`);
+      runSiteCommand(domain, cmd, root, port);
+    } else if (fs.existsSync(pkgPath)) {
+      // Fall back to the standard npm start workflow
+      console.log(`Starting application for ${domain} on port ${port}`);
+      startApp(root, port);
     }
   } catch (err) {
     console.error('Clone error:', err);
@@ -324,6 +342,7 @@ app.post('/new', async (req, res) => {
 
   const site = { domain, repo, root };
   if (port) site.port = Number(port);
+  if (cmd) site.cmd = cmd;
   sites.push(site);
   saveSites(sites);
   generateNginxConfig(site);
@@ -353,6 +372,13 @@ app.post('/update', async (req, res) => {
     if (fs.existsSync(path.join(site.root, 'package.json')))
     {
       await runCommand('npm install', site.root);
+    }
+
+    if (site.cmd) {
+      console.log(`Restarting ${domain} with stored command: ${site.cmd}`);
+      runSiteCommand(domain, site.cmd, site.root, site.port);
+    } else if (fs.existsSync(path.join(site.root, 'package.json')))
+    {
       console.log(`Restarting application for ${domain} on port ${site.port}`);
       startApp(site.root, site.port);
     }
@@ -448,7 +474,9 @@ app.post('/run', (req, res) => {
   const sites = loadSites();
   const site = sites.find(s => s.domain === domain);
   if (!site) return res.redirect('/');
-  runSiteCommand(domain, cmd, site.root);
+  // Pass the site's configured port so the command can reference
+  // process.env.PORT if desired.
+  runSiteCommand(domain, cmd, site.root, site.port);
   res.redirect('/');
 });
 
