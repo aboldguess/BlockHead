@@ -52,6 +52,11 @@ BlockHead is a simple web interface for managing multiple websites on a single s
 8. **Viewing configs**
    - Click `View Config` next to a domain to see the nginx server block that was generated for that site.
 
+9. **Verify LAN access**
+   - From another device on your network open `http://<server-ip>:3000` to confirm the BlockHead UI loads.
+   - Open `http://<server-ip>` to check that a site is served by nginx after running `enable_site.sh`.
+   - If these work locally but fail from the internet, forward port **80** (and optionally **3000** for the UI) on your router to the server's LAN IP.
+
 ## Migrating to a new server
 
 BlockHead ships with a small utility to assist when moving to a fresh machine.

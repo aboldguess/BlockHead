@@ -11,15 +11,30 @@ const simpleGit = require('simple-git');
 const archiver = require('archiver');
 const http = require('http');
 const { exec } = require('child_process');
+const os = require('os');
 
 const app = express();
 const PORT = 3000; // Change to 80 if running as root for HTTP
 const DATA_FILE = path.join(__dirname, 'sites.json');
 
-// IP address of the server used for the "View via IP" link. This can
-// be overridden with the SERVER_IP environment variable so it matches
-// your machine's public address.
-const SERVER_IP = process.env.SERVER_IP || '193.237.136.211';
+// Determine the IP address used for the "View via IP" links. If the
+// SERVER_IP environment variable is set it takes precedence. Otherwise
+// we try to detect a non-internal IPv4 address so the user sees the
+// correct address for their LAN without manual configuration.
+function getLocalIp() {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  // Fallback to localhost if nothing was detected
+  return '127.0.0.1';
+}
+
+const SERVER_IP = process.env.SERVER_IP || getLocalIp();
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
