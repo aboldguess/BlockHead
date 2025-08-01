@@ -274,17 +274,23 @@ app.post('/new', async (req, res) => {
   }
 
   try {
-    // If the target clone directory already exists, ensure it's empty.
-    // Git will refuse to clone into a non-empty folder, so we warn early.
+    // If the target clone directory already exists, handle it before cloning.
+    // Git will refuse to clone into a directory with files.
     if (fs.existsSync(root)) {
       const files = await fs.promises.readdir(root);
       if (files.length > 0) {
-        return res
-          .status(400)
-          .send(
-            `Destination ${root} already exists and is not empty. ` +
-              `Remove it or choose a different path.`
-          );
+        if (req.body.overwrite === 'on') {
+          // Overwrite option selected - remove the existing files first
+          await fs.promises.rm(root, { recursive: true, force: true });
+          console.log(`Removed existing directory ${root}`);
+        } else {
+          return res
+            .status(400)
+            .send(
+              `Destination ${root} already exists and is not empty. ` +
+                `Remove it or choose a different path, or check the Overwrite option.`
+            );
+        }
       }
     }
   } catch (statErr) {
