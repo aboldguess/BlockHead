@@ -34,7 +34,8 @@ For a detailed walkthrough see the in-app help page at `/help` once the server i
    - If the project contains a `package.json`, BlockHead automatically runs `npm install` and then starts the app using `npm start`.
 
 4. **Nginx setup**
-   - After creating a site, run the helper script to enable it and reload nginx:
+   - BlockHead now tries to run the helper script automatically when you create a site.
+   - If you still see the default "Welcome to nginx" page when clicking **View via IP**, run the command manually:
      ```bash
      sudo ./scripts/enable_site.sh example.com
      ```

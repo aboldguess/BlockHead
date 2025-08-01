@@ -26,9 +26,10 @@
             <li><strong>Run/Stop</strong> &ndash; run a custom command for the site, e.g. <code>npm start</code>, and stop it when needed.</li>
         </ul>
         <p class="mt-2">
-            After adding a site, enable it with the helper script:
-            <code>sudo ./scripts/enable_site.sh your-domain</code>.
-            Replace <code>your-domain</code> with the domain you added.
+            BlockHead attempts to enable Nginx automatically after a site is created.
+            If you still see the default Nginx page, run
+            <code>sudo ./scripts/enable_site.sh your-domain</code>
+            replacing <code>your-domain</code> with the domain you added.
         </p>
         <p class="mb-0">
             Next, log in to GoDaddy and edit the DNS records for your domain.

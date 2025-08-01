@@ -117,6 +117,20 @@ function startApp(cwd) {
   child.unref();
 }
 
+// Enable a site at the Nginx level by running the helper script. This copies
+// the generated config into /etc/nginx and reloads the server. We run it in the
+// background and simply log any output. If the command fails (for example
+// because sudo requires a password) the user can run the script manually.
+function enableSite(domain) {
+  exec(`bash scripts/enable_site.sh ${domain}`,(err, stdout, stderr) => {
+    if (err) {
+      console.error(`Auto-enable failed for ${domain}:`, stderr.trim());
+    } else if (stdout) {
+      console.log(stdout.trim());
+    }
+  });
+}
+
 // Spawn a custom command for a site. The command string is split by spaces to
 // form the executable and its arguments. The resulting child process is stored
 // so it can be terminated later.
@@ -272,6 +286,8 @@ app.post('/new', async (req, res) => {
   sites.push(site);
   saveSites(sites);
   generateNginxConfig(site);
+  // Try to automatically enable the site so nginx starts serving it
+  enableSite(site.domain);
   res.redirect('/');
 });
 
