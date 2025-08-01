@@ -37,12 +37,27 @@
     </div>
     <a class="btn btn-success mb-3" href="/new">Add New Site</a>
     <table class="table table-bordered table-striped">
-        <tr><th>Domain</th><th>Repository</th><th>Root</th><th>Actions</th></tr>
+        <tr>
+            <th>Domain</th>
+            <th>Repository</th>
+            <th>Root</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
         <% sites.forEach(function(site){ %>
         <tr>
             <td><%= site.domain %></td>
             <td><%= site.repo %></td>
             <td><%= site.root %></td>
+            <td>
+                <span class="status-dot <%= site.status.level %>" title="<%= site.status.message %>"></span>
+                <% if (site.status.level !== 'ok') { %>
+                <form action="/fix" method="post" style="display:inline">
+                    <input type="hidden" name="domain" value="<%= site.domain %>" />
+                    <button type="submit" class="btn btn-warning btn-sm">Fix</button>
+                </form>
+                <% } %>
+            </td>
             <td>
                 <form action="/update" method="post" style="display:inline">
                     <input type="hidden" name="domain" value="<%= site.domain %>" />

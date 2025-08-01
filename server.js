@@ -9,6 +9,8 @@ const path = require('path');
 const fs = require('fs');
 const simpleGit = require('simple-git');
 const archiver = require('archiver');
+const http = require('http');
+const { exec } = require('child_process');
 
 const app = express();
 const PORT = 3000; // Change to 80 if running as root for HTTP
@@ -35,9 +37,48 @@ function saveSites(sites) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(sites, null, 2));
 }
 
-// List all configured sites
-app.get('/', (req, res) => {
+// Diagnostic test: check if a site is reachable and properly configured
+async function checkSiteStatus(site) {
+  const configPath = path.join(__dirname, 'generated_configs', site.domain);
+
+  // Missing root directory or config is treated as an error
+  if (!fs.existsSync(site.root) || !fs.existsSync(configPath)) {
+    return { level: 'error', message: 'Missing files or config' };
+  }
+
+  // Attempt a simple HTTP request to determine reachability
+  return new Promise(resolve => {
+    const req = http.get(`http://${site.domain}`, res => {
+      res.resume();
+      if (res.statusCode < 400) {
+        resolve({ level: 'ok', message: 'Site reachable' });
+      } else {
+        resolve({ level: 'warning', message: `HTTP ${res.statusCode}` });
+      }
+    });
+
+    req.on('error', () => {
+      resolve({ level: 'warning', message: 'Request failed' });
+    });
+
+    // Treat a 3s timeout as a failed request
+    req.setTimeout(3000, () => {
+      req.destroy();
+      resolve({ level: 'warning', message: 'Timeout' });
+    });
+  });
+}
+
+// List all configured sites with diagnostic status information
+app.get('/', async (req, res) => {
   const sites = loadSites();
+
+  // Run diagnostics for each site in parallel
+  const statuses = await Promise.all(sites.map(checkSiteStatus));
+  sites.forEach((site, idx) => {
+    site.status = statuses[idx];
+  });
+
   // Pass the server IP so the template can build the "View via IP" links
   res.render('index', { sites, serverIp: SERVER_IP });
 });
@@ -187,6 +228,21 @@ app.post('/delete', (req, res) => {
   // Acknowledge deletion of site configuration
   console.log(`Removed configuration for ${domain}`);
   res.redirect('/');
+});
+
+// Attempt automated repair using the fix_site.sh helper script
+app.post('/fix', (req, res) => {
+  const { domain } = req.body;
+  if (!domain) return res.redirect('/');
+
+  exec(`bash scripts/fix_site.sh ${domain}`, (err, stdout, stderr) => {
+    if (err) {
+      console.error('Fix error:', stderr);
+    } else {
+      console.log(stdout);
+    }
+    res.redirect('/');
+  });
 });
 
 // Serve the generated nginx config for a specific site
