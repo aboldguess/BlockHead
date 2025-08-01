@@ -1,6 +1,7 @@
 # BlockHead
 
 BlockHead is a simple web interface for managing multiple websites on a single server using Nginx server blocks. It lets you clone projects from GitHub, pull updates, and generate basic Nginx configuration files.
+For a detailed walkthrough see the in-app help page at `/help` once the server is running.
 
 ## Features
 

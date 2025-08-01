@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BlockHead Help</title>
+    <!-- Bootstrap for consistent styling -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container my-4">
+    <h1 class="mb-4">BlockHead Setup Guide</h1>
+    <p class="mb-3">Follow the steps below to get your server online and serving sites with Nginx.</p>
+
+    <h3>1. Prepare the server</h3>
+    <ol>
+        <li>Install <strong>Node.js</strong>, <strong>Nginx</strong> and <strong>Git</strong>:
+            <pre><code>sudo ./scripts/install.sh</code></pre>
+            This script installs the packages and creates <code>/var/www</code> for your sites.
+        </li>
+        <li>If you prefer manual setup, ensure these commands run without errors:
+            <pre><code>
+sudo apt-get update
+sudo apt-get install -y nodejs nginx git
+npm install
+            </code></pre>
+        </li>
+    </ol>
+
+    <h3>2. Start BlockHead</h3>
+    <ol>
+        <li>Inside the project folder run:
+            <pre><code>node server.js</code></pre>
+        </li>
+        <li>Open <code>http://localhost:3000</code> (or <code>http://&lt;server-ip&gt;:3000</code>) in your browser.</li>
+    </ol>
+
+    <h3>3. Add your first site</h3>
+    <ol>
+        <li>Click <em>Add New Site</em> in the menu.</li>
+        <li>Fill in the domain, Git repository URL and site root path.</li>
+        <li>After creation run:
+            <pre><code>sudo ./scripts/enable_site.sh your-domain</code></pre>
+            replacing <code>your-domain</code> with the domain you entered.
+        </li>
+    </ol>
+
+    <h3>4. Configure DNS in GoDaddy</h3>
+    <ol>
+        <li>Log into GoDaddy and locate your domain's DNS settings.</li>
+        <li>Create an <strong>A record</strong> pointing to your server's public IP (e.g. <code>193.237.136.211</code>).</li>
+        <li>Save the record and wait for DNS to propagate.</li>
+    </ol>
+
+    <h3>5. Forward ports on your router</h3>
+    <ol>
+        <li>Forward external port <strong>80</strong> to your server's LAN IP on port <strong>80</strong>.</li>
+        <li>(Optional) forward port <strong>3000</strong> if you want remote access to the BlockHead UI.</li>
+    </ol>
+
+    <h3>6. Verify everything works</h3>
+    <ol>
+        <li>From another device visit <code>http://&lt;server-ip&gt;</code> to see your site via Nginx.</li>
+        <li>If the site does not load, run:
+            <pre><code>sudo ./scripts/fix_site.sh your-domain</code></pre>
+        </li>
+    </ol>
+
+    <h3>7. Environment tips</h3>
+    <ul>
+        <li>BlockHead automatically detects the server IP for convenience. If detection fails, set <code>SERVER_IP</code> before starting:
+            <pre><code>SERVER_IP=1.2.3.4 node server.js</code></pre>
+        </li>
+        <li>Keep Node.js running in the background with a tool such as <code>screen</code> or <code>pm2</code>.</li>
+    </ul>
+
+    <!-- Easy navigation back to the main page -->
+    <a href="/" class="btn btn-link mt-4">Back to Manager</a>
+    </div>
+</body>
+</html>

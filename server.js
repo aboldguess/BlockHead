@@ -98,6 +98,12 @@ app.get('/', async (req, res) => {
   res.render('index', { sites, serverIp: SERVER_IP });
 });
 
+// Serve a friendly help page with step-by-step setup instructions
+app.get('/help', (req, res) => {
+  // No dynamic data required, simply render the EJS template
+  res.render('help');
+});
+
 // Show form to create new site
 app.get('/new', (req, res) => {
   res.render('new');
