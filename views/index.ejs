@@ -47,6 +47,7 @@
             <th>Repository</th>
             <th>Root</th>
             <th>Port</th>
+            <th>Start Command</th>
             <th>Status</th>
             <th>Actions</th>
         </tr>
@@ -56,6 +57,7 @@
             <td><%= site.repo %></td>
             <td><%= site.root %></td>
             <td><%= site.port || '' %></td>
+            <td><%= site.cmd || '' %></td>
             <td>
                 <span class="status-dot <%= site.status.level %>" title="<%= site.status.message %>"></span>
                 <% if (site.status.level !== 'ok') { %>
@@ -86,7 +88,7 @@
                 </form>
                 <form action="/run" method="post" class="run-form mt-1 d-inline">
                     <input type="hidden" name="domain" value="<%= site.domain %>" />
-                    <input type="text" name="cmd" placeholder="command" class="form-control form-control-sm" />
+                    <input type="text" name="cmd" placeholder="command" value="<%= site.cmd || '' %>" class="form-control form-control-sm" />
                     <button type="submit" class="btn btn-success btn-sm">Run</button>
                 </form>
                 <form action="/stop" method="post" class="mt-1 d-inline">

@@ -49,6 +49,12 @@
                 <div class="form-text">If your app runs on a specific port (e.g. <code>3001</code>), enter it here. Leave blank for a static site.</div>
             </label>
         </div>
+        <div class="mb-3">
+            <label class="form-label">Start Command
+                <input class="form-control" type="text" name="cmd" placeholder="e.g. ./scripts/start.sh" />
+                <div class="form-text">Command to launch the application after cloning. Leave blank to use <code>npm start</code> if available.</div>
+            </label>
+        </div>
         <button type="submit" class="btn btn-primary">Create</button>
     </form>
     <!-- Easy navigation back to the site list -->
