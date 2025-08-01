@@ -110,6 +110,18 @@ Running the installation script (`./scripts/install.sh`) performs these steps
 automatically. After adjusting permissions, retry adding the site through the
 web interface.
 
+### "Destination already exists and is not empty" error
+
+This occurs when the clone directory already has files in it. You can delete the
+existing folder manually, for example:
+
+```bash
+sudo rm -rf /var/www/example
+```
+
+Or simply tick the **Overwrite existing directory** box on the Add Site form to
+let BlockHead remove the folder automatically.
+
 ### Site shows as down
 
 The main page now includes a traffic light indicator for each domain. If a site

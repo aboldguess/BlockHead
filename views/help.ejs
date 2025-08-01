@@ -41,6 +41,7 @@ npm install
     <ol>
         <li>Click <em>Add New Site</em> in the menu.</li>
         <li>Fill in the domain, Git repository URL and site root path. Enter the application's port if it runs on one.</li>
+        <li>If the root folder already contains files, either delete it with <code>sudo rm -rf /path/to/site</code> or tick <em>Overwrite existing directory</em> on the form.</li>
         <li>Optionally specify a <em>Start Command</em> to launch the app after cloning (e.g. <code>python app.py 8080 --production</code>).</li>
         <li>BlockHead attempts to configure Nginx for you automatically.</li>
         <li>If you still see the default Nginx page, run:

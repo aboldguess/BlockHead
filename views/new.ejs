@@ -19,6 +19,7 @@
             <li><strong>Domain</strong> – the web address visitors will use, e.g. <code>example.com</code>.</li>
             <li><strong>Git Repository URL</strong> – the full clone URL, such as <code>https://github.com/user/project.git</code>.</li>
             <li><strong>Site Root Path</strong> – the folder on this server where the project should live, e.g. <code>/var/www/example</code>.</li>
+            <li>If the folder already exists and you want to replace it, tick <em>Overwrite existing directory</em> below or remove the folder manually.</li>
         </ol>
         <p class="mb-0">
             After you click <em>Create</em>, BlockHead clones the repository and writes a config file into <code>generated_configs/</code>.
@@ -54,6 +55,11 @@
                 <input class="form-control" type="text" name="cmd" placeholder="e.g. ./scripts/start.sh" />
                 <div class="form-text">Command to launch the application after cloning. Leave blank to use <code>npm start</code> if available.</div>
             </label>
+        </div>
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="overwrite" id="overwrite">
+            <label class="form-check-label" for="overwrite">Overwrite existing directory if not empty</label>
+            <div class="form-text">Warning: this will delete any existing files in the path you specify.</div>
         </div>
         <button type="submit" class="btn btn-primary">Create</button>
     </form>
