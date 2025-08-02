@@ -674,21 +674,47 @@ app.post('/update', async (req, res) => {
     // Output result of the pull operation
     console.log(`Pull complete for ${domain}`);
 
+    // Paths for common dependency manifests so we can detect project types
+    const pkgJson = path.join(site.root, 'package.json');
+    const reqTxt = path.join(site.root, 'requirements.txt');
+
     // If a Node.js app is detected, reinstall dependencies (in case package.json
-    // changed) and restart the application using the same helper used when
-    // cloning. This keeps the running app up to date with minimal effort.
-    if (fs.existsSync(path.join(site.root, 'package.json')))
-    {
+    // changed) so the running app picks up new packages pulled from git.
+    if (fs.existsSync(pkgJson)) {
       await runCommand('npm install', site.root);
     }
 
+    // If a Python app uses requirements.txt, refresh the virtual environment's
+    // dependencies. We activate the site's existing .venv before invoking pip
+    // so packages are installed locally for that project only.
+    if (fs.existsSync(reqTxt)) {
+      await runCommand(
+        '. .venv/bin/activate && python3 -m pip install -r requirements.txt',
+        site.root
+      );
+    }
+
+    // Restart application using the most appropriate strategy:
     if (site.cmd) {
+      // A custom command was supplied when the site was created; reuse it so the
+      // app restarts exactly as the user configured.
       console.log(`Restarting ${domain} with stored command: ${site.cmd}`);
       runSiteCommand(domain, site.cmd, site.root, site.port);
-    } else if (fs.existsSync(path.join(site.root, 'package.json')))
-    {
+    } else if (fs.existsSync(pkgJson)) {
+      // Fall back to the standard Node.js start workflow.
       console.log(`Restarting application for ${domain} on port ${site.port}`);
       startApp(domain, site.root, site.port);
+    } else if (fs.existsSync(reqTxt)) {
+      // No custom command was provided, so try common Python entry points. The
+      // virtual environment is activated to ensure the script runs with the
+      // freshly installed dependencies.
+      const candidates = ['app.py', 'main.py'];
+      const entry = candidates.find(f => fs.existsSync(path.join(site.root, f)));
+      if (entry) {
+        const pyCmd = `. .venv/bin/activate && python3 ${entry}`;
+        console.log(`Restarting ${domain} with default command: ${pyCmd}`);
+        runSiteCommand(domain, pyCmd, site.root, site.port);
+      }
     }
   } catch (err) {
     console.error(err);
