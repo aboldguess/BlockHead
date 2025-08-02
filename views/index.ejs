@@ -11,9 +11,14 @@
 </head>
 <body>
     <div class="container my-4">
-    <h1 class="mb-4">Website Manager</h1>
-    <!-- Instruction block to clearly explain how this page works -->
-    <div class="alert alert-info instructions">
+      <h1 class="mb-4">Website Manager</h1>
+      <% if (dns === '1') { %>
+      <div class="alert alert-success">DNS record created. It may take a few minutes for changes to propagate.</div>
+      <% } else if (dns === '0') { %>
+      <div class="alert alert-danger">DNS setup failed: <%= dnsError %>. Please configure the A record manually in GoDaddy.</div>
+      <% } %>
+      <!-- Instruction block to clearly explain how this page works -->
+      <div class="alert alert-info instructions">
         <p class="mb-1"><strong>How to manage your sites:</strong></p>
         <ul class="mb-0">
             <li><strong>Add New Site</strong> &ndash; register a domain and clone its repository. Specify the port if the app is dynamic.</li>
@@ -33,11 +38,9 @@
             <code>sudo ./scripts/enable_site.sh your-domain</code>
             replacing <code>your-domain</code> with the domain you added.
         </p>
-        <p class="mb-0">
-            Next, log in to GoDaddy and edit the DNS records for your domain.
-            Create an <strong>A record</strong> pointing to <code><%= serverIp %></code>.
-            Once DNS has propagated you can view the site using the buttons below.
-        </p>
+          <p class="mb-0">
+              To point your domain at this server you may either enter your GoDaddy API key and secret next to a site and press <em>Setup DNS</em>, or log in to GoDaddy and manually create an <strong>A record</strong> pointing to <code><%= serverIp %></code>. Once DNS has propagated you can view the site using the buttons below.
+          </p>
         <p class="mb-0">To start a site manually, enter a command such as <code>npm start</code> and press <em>Run</em>. Use <em>Stop</em> to terminate it.</p>
     </div>
     <a class="btn btn-success mb-3" href="/new">Add New Site</a>
@@ -97,15 +100,23 @@
                     <input type="text" name="cmd" placeholder="command" value="<%= site.cmd || '' %>" class="form-control form-control-sm" />
                     <button type="submit" class="btn btn-success btn-sm">Run</button>
                 </form>
-                <form action="/stop" method="post" class="mt-1 d-inline">
-                    <input type="hidden" name="domain" value="<%= site.domain %>" />
-                    <button type="submit" class="btn btn-warning btn-sm">Stop</button>
-                </form>
-            </td>
-        </tr>
-        <% }) %>
-    </table>
-    </div>
+                  <form action="/stop" method="post" class="mt-1 d-inline">
+                      <input type="hidden" name="domain" value="<%= site.domain %>" />
+                      <button type="submit" class="btn btn-warning btn-sm">Stop</button>
+                  </form>
+                  <!-- Optional GoDaddy DNS automation -->
+                  <form action="/dns" method="post" class="mt-1 d-inline">
+                      <input type="hidden" name="domain" value="<%= site.domain %>" />
+                      <input type="text" name="key" placeholder="API Key" class="form-control form-control-sm mb-1" />
+                      <input type="text" name="secret" placeholder="API Secret" class="form-control form-control-sm mb-1" />
+                      <button type="submit" class="btn btn-dark btn-sm">Setup DNS</button>
+                  </form>
+                  <div class="form-text">Provide GoDaddy credentials for automatic DNS. Otherwise configure records manually.</div>
+              </td>
+          </tr>
+          <% }) %>
+      </table>
+      </div>
 <%- include("partials/log-panel") %>
 </body>
 </html>

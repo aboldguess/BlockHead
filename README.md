@@ -48,9 +48,9 @@ For a detailed walkthrough see the in-app help page at `/help` once the server i
      Replace `example.com` with your domain name.
 
 5. **Configure your domain in GoDaddy**
-   - Log into GoDaddy and edit the DNS records for your domain.
-   - Create an `A` record that points to your home server's static IP (`193.237.136.211`).
-   - Allow time for DNS propagation.
+    - On the main page you can enter your GoDaddy API key and secret next to a domain and press **Setup DNS** to automatically create an `A` record pointing to your server's IP (`193.237.136.211`).
+    - If you prefer not to use the API, log into GoDaddy manually and create an `A` record for the domain pointing to the same IP.
+    - Allow time for DNS propagation regardless of the method used.
 
 6. **Updating sites**
    - On the main page, click `Pull Latest` next to a domain to run `git pull origin main` in the site's directory.

@@ -16,6 +16,8 @@ const http = require('http');
 // background processes such as starting an app server
 const { exec, spawn } = require('child_process');
 const os = require('os');
+// Helper used to automate DNS configuration through GoDaddy's API
+const { updateARecord } = require('./scripts/godaddy');
 
 const app = express();
 const PORT = 3000; // Change to 80 if running as root for HTTP
@@ -400,7 +402,13 @@ app.get('/', async (req, res) => {
   });
 
   // Pass the server IP so the template can build the "View via IP" links
-  res.render('index', { sites, serverIp: SERVER_IP });
+  res.render('index', {
+    sites,
+    serverIp: SERVER_IP,
+    // Query parameters allow the DNS endpoint to communicate success/failure
+    dns: req.query.dns || null,
+    dnsError: req.query.error || null
+  });
 });
 
 // Serve a friendly help page with step-by-step setup instructions
@@ -709,6 +717,33 @@ app.post('/stop', (req, res) => {
   if (domain && !isValidDomain(domain)) return res.status(400).send('Invalid domain');
   if (domain) stopSiteCommand(domain);
   res.redirect('/');
+});
+
+// -------------------------------------------------------------------
+// DNS automation endpoints
+// -------------------------------------------------------------------
+
+// Create or update an A record for the requested domain using GoDaddy's API.
+// The user supplies their API key and secret via a small form on the main page.
+// If the request succeeds we redirect back with a success flag so the UI can
+// show a confirmation message. Any error results in a failure flag so the user
+// knows to fall back to manual DNS configuration.
+app.post('/dns', async (req, res) => {
+  const { domain, key, secret } = req.body;
+  // Validate domain before performing network operations
+  if (!domain || !isValidDomain(domain)) return res.status(400).send('Invalid domain');
+  if (!key || !secret) {
+    return res.redirect('/?dns=0&error=' + encodeURIComponent('Missing GoDaddy API credentials'));
+  }
+  try {
+    await updateARecord(domain, SERVER_IP, key, secret);
+    // Success path: DNS record was created/updated
+    res.redirect('/?dns=1');
+  } catch (err) {
+    // Failure path: log the error and notify the UI for manual fallback
+    console.error('DNS setup failed:', err.message);
+    res.redirect('/?dns=0&error=' + encodeURIComponent(err.message));
+  }
 });
 
 // Render the SSL configuration form for a specific domain
