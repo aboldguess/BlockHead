@@ -23,6 +23,11 @@
         <!-- Display the file path being edited so advanced users know the exact location -->
         <p class="text-muted">Editing: <code><%= filePath %></code></p>
 
+        <!-- Error message shown when nginx fails to reload after saving -->
+        <% if (error) { %>
+            <div class="alert alert-danger"><%= error %></div>
+        <% } %>
+
         <!-- Confirmation message displayed after successful save -->
         <% if (saved) { %>
             <div class="alert alert-success">Configuration saved and reload attempted.</div>

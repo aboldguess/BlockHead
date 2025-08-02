@@ -145,7 +145,9 @@ app.get('/nginx/expert', (req, res) => {
     filePath,
     sites,
     domain,
-    saved: Boolean(req.query.saved)
+    saved: Boolean(req.query.saved),
+    // Pass along any error message from a failed reload so the template can display it
+    error: req.query.error || null,
   });
 });
 
@@ -162,17 +164,21 @@ app.post('/nginx/expert', (req, res) => {
   }
   try {
     fs.writeFileSync(filePath, config);
+    // Attempt to reload nginx so the operator can immediately test their changes
     exec('nginx -s reload', (err) => {
       if (err) {
+        // Failure path: surface the error and notify the UI that the save failed
         console.error('Nginx reload failed:', err.message);
-      } else {
-        console.log('Nginx reloaded successfully');
+        return res.redirect(`/nginx/expert?site=${domain}&saved=0&error=${encodeURIComponent(err.message)}`);
       }
+      // Success path: reload worked, inform the user the configuration was saved
+      console.log('Nginx reloaded successfully');
       res.redirect(`/nginx/expert?site=${domain}&saved=1`);
     });
   } catch (err) {
+    // Writing the file itself failed before we could attempt a reload
     console.error('Failed to write nginx config:', err.message);
-    res.redirect(`/nginx/expert?site=${domain}`);
+    res.redirect(`/nginx/expert?site=${domain}&saved=0&error=${encodeURIComponent(err.message)}`);
   }
 });
 
