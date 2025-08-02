@@ -14,8 +14,12 @@ if [ -z "$DOMAIN" ]; then
   exit 1
 fi
 
-ROOT_DIR="$(dirname "$0")/.."
-CONFIG="$ROOT_DIR/generated_configs/$DOMAIN"
+# Determine the absolute path to this script's directory so the generated
+# configuration can be found regardless of the caller's working directory.
+DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Build the path to the generated nginx configuration for this domain.
+CONFIG="$DIR/../generated_configs/$DOMAIN"
 TARGET="/etc/nginx/sites-available/$DOMAIN"
 
 if [ ! -f "$CONFIG" ]; then
