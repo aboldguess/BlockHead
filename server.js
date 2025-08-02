@@ -183,14 +183,31 @@ app.post('/nginx/expert', (req, res) => {
 });
 
 // Utility function to load site data from JSON file
+// This cached copy stores the most recently parsed site data so that we can
+// recover gracefully if the JSON on disk becomes malformed.
+let cachedSites = [];
+
 function loadSites() {
+  // If the data file doesn't exist yet, treat it as having no sites configured.
   if (!fs.existsSync(DATA_FILE)) return [];
-  return JSON.parse(fs.readFileSync(DATA_FILE));
+  try {
+    // Attempt to parse the JSON file and update our cached copy on success.
+    const data = JSON.parse(fs.readFileSync(DATA_FILE));
+    cachedSites = data;
+    return data;
+  } catch (err) {
+    // Parsing failed: log the error and fall back to the last known good state
+    // (an empty array if we've never successfully loaded the file).
+    console.error(`Failed to parse site data from ${DATA_FILE}:`, err);
+    return cachedSites;
+  }
 }
 
 // Utility function to save site data to JSON file
 function saveSites(sites) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(sites, null, 2));
+  // Persist the updated site list in memory as the new last known good state.
+  cachedSites = sites;
 }
 
 // Run a shell command and return a promise that resolves when it completes.
