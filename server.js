@@ -18,6 +18,7 @@ const os = require('os');
 const app = express();
 const PORT = 3000; // Change to 80 if running as root for HTTP
 const DATA_FILE = path.join(__dirname, 'sites.json');
+const SSL_DIR = path.join(__dirname, 'ssl'); // Folder for user-provided SSL certs
 
 // --------------------------------------
 // Simple in-memory log store used by the
@@ -503,6 +504,34 @@ app.post('/stop', (req, res) => {
   res.redirect('/');
 });
 
+// Render the SSL configuration form for a specific domain
+app.get('/ssl/:domain', (req, res) => {
+  const { domain } = req.params;
+  res.render('ssl', { domain });
+});
+
+// Accept certificate and key data then regenerate the Nginx config
+app.post('/ssl/:domain', (req, res) => {
+  const { domain } = req.params;
+  const { cert, key } = req.body;
+  if (!cert || !key) return res.status(400).send('Certificate and key required');
+
+  // Ensure the ssl storage directory exists before writing files
+  if (!fs.existsSync(SSL_DIR)) fs.mkdirSync(SSL_DIR);
+  fs.writeFileSync(path.join(SSL_DIR, `${domain}.crt`), cert);
+  fs.writeFileSync(path.join(SSL_DIR, `${domain}.key`), key);
+
+  // Regenerate nginx configuration with SSL directives and reload the site
+  const sites = loadSites();
+  const site = sites.find(s => s.domain === domain);
+  if (site) {
+    generateNginxConfig(site);
+    enableSite(site.domain);
+  }
+
+  res.redirect('/');
+});
+
 // Serve the generated nginx config for a specific site
 app.get('/config/:domain', (req, res) => {
   const { domain } = req.params;
@@ -517,13 +546,27 @@ app.get('/config/:domain', (req, res) => {
 
 // Generate an Nginx server block for a site
 function generateNginxConfig(site) {
+  // Determine if SSL files exist for this domain so we can include them
+  const certPath = path.join(SSL_DIR, `${site.domain}.crt`);
+  const keyPath = path.join(SSL_DIR, `${site.domain}.key`);
+  const hasSsl = fs.existsSync(certPath) && fs.existsSync(keyPath);
+
   let config;
   if (site.port) {
     // Proxy dynamic applications running on a port
-    config = `server {\n  listen 80;\n  server_name ${site.domain};\n  location / {\n    proxy_pass http://127.0.0.1:${site.port};\n    proxy_set_header Host $host;\n    proxy_set_header X-Real-IP $remote_addr;\n  }\n}`;
+    if (hasSsl) {
+      // Include SSL directives when certificate and key are present
+      config = `server {\n  listen 80;\n  listen 443 ssl;\n  server_name ${site.domain};\n  ssl_certificate ${certPath};\n  ssl_certificate_key ${keyPath};\n  location / {\n    proxy_pass http://127.0.0.1:${site.port};\n    proxy_set_header Host $host;\n    proxy_set_header X-Real-IP $remote_addr;\n  }\n}`;
+    } else {
+      config = `server {\n  listen 80;\n  server_name ${site.domain};\n  location / {\n    proxy_pass http://127.0.0.1:${site.port};\n    proxy_set_header Host $host;\n    proxy_set_header X-Real-IP $remote_addr;\n  }\n}`;
+    }
   } else {
-    // Simple static site configuration
-    config = `server {\n  listen 80;\n  server_name ${site.domain};\n  root ${site.root};\n  index index.html index.htm;\n  location / {\n    try_files $uri $uri/ =404;\n  }\n}`;
+    // Configuration for static files
+    if (hasSsl) {
+      config = `server {\n  listen 80;\n  listen 443 ssl;\n  server_name ${site.domain};\n  ssl_certificate ${certPath};\n  ssl_certificate_key ${keyPath};\n  root ${site.root};\n  index index.html index.htm;\n  location / {\n    try_files $uri $uri/ =404;\n  }\n}`;
+    } else {
+      config = `server {\n  listen 80;\n  server_name ${site.domain};\n  root ${site.root};\n  index index.html index.htm;\n  location / {\n    try_files $uri $uri/ =404;\n  }\n}`;
+    }
   }
   const outputDir = path.join(__dirname, 'generated_configs');
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
