@@ -538,6 +538,8 @@ app.post('/new', async (req, res) => {
     const pkgPath = path.join(root, 'package.json');
     // Look for a Python requirements file so we can handle Python projects too
     const requirementsPath = path.join(root, 'requirements.txt');
+    // Track any detected Python entry point so we can launch it automatically
+    let pythonEntry = null;
     if (fs.existsSync(pkgPath)) {
       console.log(`Installing dependencies for ${domain}`);
       try {
@@ -556,6 +558,13 @@ app.post('/new', async (req, res) => {
       } catch (pyInstallErr) {
         console.error('Python install failed:', pyInstallErr);
       }
+      // After installing dependencies, check for common entry scripts so
+      // we can start the app automatically without a custom command.
+      const candidates = ['app.py', 'main.py'];
+      pythonEntry = candidates.find(f => fs.existsSync(path.join(root, f))) || null;
+      if (pythonEntry) {
+        console.log(`Detected Python entry point ${pythonEntry} for ${domain}`);
+      }
     }
 
     if (cmd) {
@@ -565,6 +574,11 @@ app.post('/new', async (req, res) => {
       // Fall back to the standard npm start workflow
       console.log(`Starting application for ${domain} on port ${port}`);
       startApp(domain, root, port);
+    } else if (pythonEntry) {
+      // Launch detected Python entry point as a sensible default
+      const pyCmd = `python ${pythonEntry}`;
+      console.log(`Starting ${domain} with default command: ${pyCmd}`);
+      runSiteCommand(domain, pyCmd, root, port);
     }
   } catch (err) {
     console.error('Clone error:', err);
