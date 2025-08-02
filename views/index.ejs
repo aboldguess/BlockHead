@@ -27,8 +27,9 @@
             <li><strong>Run/Stop</strong> &ndash; run a custom command for the site, e.g. <code>npm start</code>, and stop it when needed.</li>
         </ul>
         <p class="mt-2">
-            BlockHead attempts to enable Nginx automatically after a site is created.
-            If you still see the default Nginx page, run
+            BlockHead attempts to enable Nginx automatically after a site is created using <code>sudo</code>.
+            This requires the server to run with passwordless sudo rights.
+            If the step fails or you still see the default Nginx page, run
             <code>sudo ./scripts/enable_site.sh your-domain</code>
             replacing <code>your-domain</code> with the domain you added.
         </p>

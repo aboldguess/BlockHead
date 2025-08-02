@@ -247,7 +247,10 @@ function startApp(cwd, port) {
 // the user instead of silently redirecting.
 function enableSite(domain) {
   return new Promise((resolve, reject) => {
-    exec(`bash scripts/enable_site.sh ${domain}`, (err, stdout, stderr) => {
+    // Run the helper script with sudo so it can modify nginx files in /etc.
+    // Using cwd ensures the relative script path resolves even if the server
+    // is launched from a different directory.
+    exec(`sudo bash scripts/enable_site.sh ${domain}`, { cwd: __dirname }, (err, stdout, stderr) => {
       if (err) {
         const message = stderr.trim() || err.message;
         console.error(`Auto-enable failed for ${domain}: ${message}`);
