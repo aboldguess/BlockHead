@@ -92,43 +92,87 @@ app.get('/logs', (req, res) => {
 // Nginx Configuration Editor Endpoints
 // --------------------------------------
 
-// Render a simple editor allowing operators to view and modify the main
-// nginx configuration file. If the file cannot be read, an empty string is
-// passed so the template can display a helpful message.
+// Simple mode allows operators to tweak basic settings such as the
+// root directory or proxy port for each configured site. The list of
+// sites is displayed in a dropdown at the top of the page.
 app.get('/nginx', (req, res) => {
-  let config = '';
-  try {
-    config = fs.readFileSync(NGINX_CONFIG, 'utf8');
-  } catch (err) {
-    console.error('Unable to read nginx config:', err.message);
-  }
+  const sites = loadSites();
+  const domain = req.query.site || (sites[0] && sites[0].domain);
+  const site = sites.find(s => s.domain === domain) || null;
   res.render('nginx', {
-    config,
-    // The saved query parameter triggers a success alert after a POST
+    sites,
+    site,
     saved: Boolean(req.query.saved)
   });
 });
 
-// Persist changes to the nginx configuration file and attempt to reload
-// nginx so the new settings take effect immediately. Errors are logged but
-// the user is redirected back to the editor regardless.
-app.post('/nginx', (req, res) => {
-  const { config } = req.body;
+// Persist basic settings edited in simple mode and regenerate the
+// corresponding nginx server block. After writing the new config the
+// helper script is invoked to reload nginx.
+app.post('/nginx', async (req, res) => {
+  const { domain, root, port } = req.body;
+  const sites = loadSites();
+  const site = sites.find(s => s.domain === domain);
+  if (!site) return res.redirect('/nginx');
+  site.root = root;
+  site.port = port ? Number(port) : undefined;
+  saveSites(sites);
+  generateNginxConfig(site);
   try {
-    fs.writeFileSync(NGINX_CONFIG, config);
-    // Reload nginx in the background; this requires the server to have the
-    // appropriate permissions but failure is non-fatal for the app itself.
+    await enableSite(site.domain);
+  } catch (err) {
+    console.error('Failed to enable site:', err.message);
+  }
+  res.redirect(`/nginx?site=${domain}&saved=1`);
+});
+
+// Expert mode exposes the raw nginx configuration file for advanced
+// tweaking. Operators can choose either a site-specific config or the
+// global nginx.conf file.
+app.get('/nginx/expert', (req, res) => {
+  const sites = loadSites();
+  const domain = req.query.site || '';
+  let filePath = NGINX_CONFIG;
+  if (domain) filePath = path.join(__dirname, 'generated_configs', domain);
+  let config = '';
+  try {
+    config = fs.readFileSync(filePath, 'utf8');
+  } catch (err) {
+    console.error('Unable to read nginx config:', err.message);
+  }
+  res.render('nginx-expert', {
+    config,
+    filePath,
+    sites,
+    domain,
+    saved: Boolean(req.query.saved)
+  });
+});
+
+// Save changes made in expert mode to the selected configuration file and
+// attempt to reload nginx so the new settings take effect immediately.
+app.post('/nginx/expert', (req, res) => {
+  const { domain, config } = req.body;
+  let filePath = NGINX_CONFIG;
+  if (domain) {
+    // Ensure the directory for generated configs exists before writing
+    const dir = path.join(__dirname, 'generated_configs');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    filePath = path.join(dir, domain);
+  }
+  try {
+    fs.writeFileSync(filePath, config);
     exec('nginx -s reload', (err) => {
       if (err) {
         console.error('Nginx reload failed:', err.message);
       } else {
         console.log('Nginx reloaded successfully');
       }
-      res.redirect('/nginx?saved=1');
+      res.redirect(`/nginx/expert?site=${domain}&saved=1`);
     });
   } catch (err) {
     console.error('Failed to write nginx config:', err.message);
-    res.redirect('/nginx');
+    res.redirect(`/nginx/expert?site=${domain}`);
   }
 });
 

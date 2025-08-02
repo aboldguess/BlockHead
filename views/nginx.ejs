@@ -1,27 +1,50 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Nginx Configuration</title>
+    <title>Nginx Configuration - Simple Mode</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
     <div class="container my-4">
-        <h1 class="mb-4">Nginx Configuration</h1>
-        <!-- When redirected after a save, show a confirmation message -->
+        <h1 class="mb-4">Nginx Configuration <small class="text-muted">Simple Mode</small></h1>
+
+        <!-- Show success message after saving settings -->
         <% if (saved) { %>
-            <div class="alert alert-success">Configuration saved and reload attempted.</div>
+            <div class="alert alert-success">Settings saved.</div>
         <% } %>
-        <% if (!config) { %>
-            <!-- Alert the user if the config file could not be read -->
-            <div class="alert alert-warning">No configuration data found.</div>
+
+        <% if (!sites.length) { %>
+            <!-- Warn when no sites are configured so there is nothing to edit -->
+            <div class="alert alert-warning">No sites configured.</div>
+        <% } else { %>
+            <!-- Dropdown allows switching between different site configurations -->
+            <div class="mb-3">
+                <label class="form-label">Configure site:</label>
+                <select class="form-select" onchange="location.href='/nginx?site=' + this.value">
+                    <% sites.forEach(s => { %>
+                    <option value="<%= s.domain %>" <%= site && site.domain===s.domain ? 'selected' : '' %>><%= s.domain %></option>
+                    <% }) %>
+                </select>
+            </div>
+
+            <!-- Form exposes basic nginx-related settings stored for each site -->
+            <form method="post" action="/nginx">
+                <input type="hidden" name="domain" value="<%= site.domain %>">
+                <div class="mb-3">
+                    <label class="form-label">Root Directory</label>
+                    <input type="text" class="form-control" name="root" value="<%= site.root %>">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Proxy Port (leave blank for static)</label>
+                    <input type="text" class="form-control" name="port" value="<%= site.port || '' %>">
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a href="/nginx/expert?site=<%= site.domain %>" class="btn btn-secondary">Expert Mode</a>
+                <a href="/" class="btn btn-secondary">Back</a>
+            </form>
         <% } %>
-        <!-- Simple textarea editor for nginx.conf -->
-        <form method="post" action="/nginx">
-            <textarea name="config" class="form-control" rows="20"><%- config %></textarea>
-            <button type="submit" class="btn btn-primary mt-3">Save</button>
-            <a href="/" class="btn btn-secondary mt-3">Back</a>
-        </form>
     </div>
 </body>
 </html>
+
