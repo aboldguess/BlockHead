@@ -991,6 +991,16 @@ app.get('/test/:domain', async (req, res) => {
 
   // Options for the HTTP request using the detected server IP but specifying the domain
   const serverIp = await getServerIp();
+  // If the IP couldn't be determined (for example due to lack of
+  // internet connectivity), return a helpful error instead of
+  // attempting a request with an undefined host.
+  if (!serverIp) {
+    return res.json({
+      ok: false,
+      error: 'Unable to determine server IP. Set SERVER_IP or check network connectivity.'
+    });
+  }
+
   const options = {
     host: serverIp,
     port: 80,
