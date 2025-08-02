@@ -322,6 +322,15 @@ function enableSite(domain) {
 // the system shell rather than manually splitting into executable and
 // arguments. The resulting child process is stored so it can be terminated later.
 function runSiteCommand(domain, cmd, cwd, port) {
+  // If a process is already running for this domain, stop it first so we don't
+  // leave multiple commands competing for the same resources or keep stale
+  // processes alive.
+  if (runningProcs[domain]) {
+    // stopSiteCommand also cleans up the runningProcs entry so the new child can
+    // register itself without leaving behind references to the old process.
+    stopSiteCommand(domain);
+  }
+
   // Preserve the existing environment but inject PORT if provided so
   // scripts that rely on process.env.PORT still work.
   const env = { ...process.env };
@@ -344,7 +353,7 @@ function runSiteCommand(domain, cmd, cwd, port) {
     console.error(`Failed to start command "${cmd}" for ${domain}: ${err.message}`);
   });
   child.unref();
-  // Track the process so it can be terminated later via /stop
+  // Track the process so it can be terminated later via /stop.
   runningProcs[domain] = child;
   console.log(`Started "${cmd}" for ${domain} (pid ${child.pid})`);
 }
