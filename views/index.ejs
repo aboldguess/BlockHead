@@ -26,7 +26,7 @@
             <li><strong>Backup</strong> &ndash; download a zip of the site files and nginx config.</li>
             <li><strong>Configure SSL</strong> &ndash; upload certificates for HTTPS.</li>
             <li><strong>View Config</strong> &ndash; open the generated nginx server block.</li>
-            <li><strong>View via IP</strong> &ndash; open the site using the server IP (<%= serverIp %>).</li>
+            <li><strong>Test via IP</strong> &ndash; verify the site by sending a request with a custom <code>Host</code> header. Directly visiting the IP in a browser will usually show the default site. Use the button next to each site or run <code>curl -H "Host: your-domain" http://<%= serverIp %></code>.</li>
             <li><strong>View Site</strong> &ndash; open the site using its domain name.</li>
             <li><strong>Delete</strong> &ndash; remove the entry here (does not delete files).</li>
             <li><strong>Run/Stop</strong> &ndash; run a custom command for the site, e.g. <code>npm start</code>, and stop it when needed.</li>
@@ -38,9 +38,9 @@
             <code>sudo ./scripts/enable_site.sh your-domain</code>
             replacing <code>your-domain</code> with the domain you added.
         </p>
-          <p class="mb-0">
-              To point your domain at this server you may either enter your GoDaddy API key and secret next to a site and press <em>Setup DNS</em>, or log in to GoDaddy and manually create an <strong>A record</strong> pointing to <code><%= serverIp %></code>. Once DNS has propagated you can view the site using the buttons below.
-          </p>
+            <p class="mb-0">
+                To point your domain at this server you may either enter your GoDaddy API key and secret next to a site and press <em>Setup DNS</em>, or log in to GoDaddy and manually create an <strong>A record</strong> pointing to <code><%= serverIp %></code>. Once DNS has propagated you can view the site using the buttons below. Before propagation you can still preview a site using the Test via IP feature.
+            </p>
         <p class="mb-0">To start a site manually, enter a command such as <code>npm start</code> and press <em>Run</em>. Use <em>Stop</em> to terminate it.</p>
     </div>
     <a class="btn btn-success mb-3" href="/new">Add New Site</a>
@@ -87,8 +87,8 @@
                 <a class="btn btn-warning btn-sm" href="/ssl/<%= site.domain %>">Configure SSL</a>
                 <!-- Link to view the generated nginx config -->
                 <a class="btn btn-info btn-sm" href="/config/<%= site.domain %>" target="_blank">View Config</a>
-                <!-- Open the site via the server's IP address -->
-                <a class="btn btn-outline-success btn-sm" href="http://<%= serverIp %>" target="_blank">View via IP</a>
+                <!-- Send a test request using the server IP and a custom Host header -->
+                <button type="button" class="btn btn-outline-success btn-sm test-ip" data-domain="<%= site.domain %>">Test via IP</button>
                 <!-- Open the site using its domain name -->
                 <a class="btn btn-success btn-sm" href="http://<%= site.domain %>" target="_blank">View Site</a>
                 <form action="/delete" method="post" style="display:inline" onsubmit="return confirm('Delete <%= site.domain %>?')">
@@ -118,5 +118,24 @@
       </table>
       </div>
 <%- include("partials/log-panel") %>
+<script>
+// Attach click handlers for each "Test via IP" button
+document.querySelectorAll('.test-ip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const domain = btn.dataset.domain; // domain to test
+    // Request backend to fetch the site using the server IP and Host header
+    fetch(`/test/${domain}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.ok) {
+          alert(`Status ${data.status}: ${data.body}`);
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      })
+      .catch(err => alert(`Request failed: ${err}`));
+  });
+});
+</script>
 </body>
 </html>
