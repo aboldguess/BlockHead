@@ -24,9 +24,11 @@ For a detailed walkthrough see the in-app help page at `/help` once the server i
    ```
 2. **Start the server**
    ```bash
-   node server.js
-   ```
-   The app listens on port `3000` by default. Open `http://localhost:3000` (or the machine's IP) in your browser.
+ node server.js
+  ```
+  The app listens on port `3000` by default. Open `http://localhost:3000` (or the machine's IP) in your browser.
+  For automatic Nginx setup the server process must be able to run `sudo` without a password.
+  If this is not possible, you can still enable sites manually using the helper script described below.
 
 3. **Add your first site**
    - Click `Add New Site`
@@ -37,8 +39,9 @@ For a detailed walkthrough see the in-app help page at `/help` once the server i
    - If the project contains a `package.json`, BlockHead automatically runs `npm install` and then starts the app using `npm start`.
 
 4. **Nginx setup**
-   - BlockHead now tries to run the helper script automatically when you create a site.
-   - If you still see the default "Welcome to nginx" page when clicking **View via IP**, run the command manually:
+   - BlockHead tries to run the helper script with `sudo` after you create a site.
+   - This requires the server to have passwordless sudo rights; otherwise the step will fail silently.
+   - If the default "Welcome to nginx" page still appears or the automatic step fails, run the command manually:
      ```bash
      sudo ./scripts/enable_site.sh example.com
      ```
@@ -61,7 +64,7 @@ For a detailed walkthrough see the in-app help page at `/help` once the server i
 
 9. **Verify LAN access**
    - From another device on your network open `http://<server-ip>:3000` to confirm the BlockHead UI loads.
-   - Open `http://<server-ip>` to check that a site is served by nginx after running `enable_site.sh`.
+   - Open `http://<server-ip>` to confirm a site is served by nginx after the helper script enables it (automatically or via a manual run of `enable_site.sh`).
    - If these work locally but fail from the internet, forward port **80** (and optionally **3000** for the UI) on your router to the server's LAN IP.
 
 10. **Install and test SSL certificates**
