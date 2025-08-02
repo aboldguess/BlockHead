@@ -77,6 +77,13 @@ function getLocalIp() {
 
 const SERVER_IP = process.env.SERVER_IP || getLocalIp();
 
+// Validate that a domain contains only expected characters.
+// This protects file operations and shell commands from
+// malicious input such as path traversal or command injection.
+function isValidDomain(domain) {
+  return /^[A-Za-z0-9.-]+$/.test(domain);
+}
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
@@ -97,7 +104,12 @@ app.get('/logs', (req, res) => {
 // sites is displayed in a dropdown at the top of the page.
 app.get('/nginx', (req, res) => {
   const sites = loadSites();
-  const domain = req.query.site || (sites[0] && sites[0].domain);
+  const domainQuery = req.query.site;
+  // Validate the requested domain, if any, before using it
+  if (domainQuery && !isValidDomain(domainQuery)) {
+    return res.status(400).send('Invalid domain');
+  }
+  const domain = domainQuery || (sites[0] && sites[0].domain);
   const site = sites.find(s => s.domain === domain) || null;
   res.render('nginx', {
     sites,
@@ -111,6 +123,8 @@ app.get('/nginx', (req, res) => {
 // helper script is invoked to reload nginx.
 app.post('/nginx', async (req, res) => {
   const { domain, root, port } = req.body;
+  // Reject domains containing unexpected characters
+  if (!isValidDomain(domain)) return res.status(400).send('Invalid domain');
   const sites = loadSites();
   const site = sites.find(s => s.domain === domain);
   if (!site) return res.redirect('/nginx');
@@ -131,7 +145,12 @@ app.post('/nginx', async (req, res) => {
 // global nginx.conf file.
 app.get('/nginx/expert', (req, res) => {
   const sites = loadSites();
-  const domain = req.query.site || '';
+  const domainQuery = req.query.site;
+  // Ensure supplied domain is valid before using it to build a file path
+  if (domainQuery && !isValidDomain(domainQuery)) {
+    return res.status(400).send('Invalid domain');
+  }
+  const domain = domainQuery || '';
   let filePath = NGINX_CONFIG;
   if (domain) filePath = path.join(__dirname, 'generated_configs', domain);
   let config = '';
@@ -155,6 +174,10 @@ app.get('/nginx/expert', (req, res) => {
 // attempt to reload nginx so the new settings take effect immediately.
 app.post('/nginx/expert', (req, res) => {
   const { domain, config } = req.body;
+  // Validate domain when saving a site-specific configuration
+  if (domain && !isValidDomain(domain)) {
+    return res.status(400).send('Invalid domain');
+  }
   let filePath = NGINX_CONFIG;
   if (domain) {
     // Ensure the directory for generated configs exists before writing
@@ -400,6 +423,8 @@ app.get('/new', (req, res) => {
 // Handle creation of new site
 app.post('/new', async (req, res) => {
   const { domain, repo, root, port, cmd } = req.body;
+  // Reject malformed domains early to avoid unsafe file operations
+  if (!isValidDomain(domain)) return res.status(400).send('Invalid domain');
   // Log the creation request for debugging purposes
   console.log(`Creating new site ${domain} from ${repo} into ${root} on port ${port}`);
 
@@ -528,6 +553,8 @@ app.post('/new', async (req, res) => {
 // Pull latest changes for a site
 app.post('/update', async (req, res) => {
   const { domain } = req.body;
+  // Validate domain before performing git operations on the site's directory
+  if (!isValidDomain(domain)) return res.status(400).send('Invalid domain');
   const sites = loadSites();
   const site = sites.find(s => s.domain === domain);
   if (!site) return res.sendStatus(404);
@@ -567,6 +594,8 @@ app.post('/update', async (req, res) => {
 // Create a downloadable archive of a site's files and nginx config
 app.post('/backup', (req, res) => {
   const { domain } = req.body;
+  // Verify domain is safe before reading files for backup
+  if (!isValidDomain(domain)) return res.status(400).send('Invalid domain');
   const sites = loadSites();
   const site = sites.find(s => s.domain === domain);
   if (!site) return res.sendStatus(404);
@@ -616,6 +645,8 @@ app.post('/backup', (req, res) => {
 // Delete a site configuration (does not remove files)
 app.post('/delete', (req, res) => {
   const { domain } = req.body;
+  // Prevent deletion requests with malformed domain names
+  if (!isValidDomain(domain)) return res.status(400).send('Invalid domain');
   let sites = loadSites();
   sites = sites.filter(s => s.domain !== domain);
   saveSites(sites);
@@ -628,6 +659,8 @@ app.post('/delete', (req, res) => {
 app.post('/fix', (req, res) => {
   const { domain } = req.body;
   if (!domain) return res.redirect('/');
+  // Avoid passing unvalidated domains to the shell script
+  if (!isValidDomain(domain)) return res.status(400).send('Invalid domain');
 
   exec(`bash scripts/fix_site.sh ${domain}`, (err, stdout, stderr) => {
     if (err) {
@@ -645,6 +678,8 @@ app.post('/fix', (req, res) => {
 app.post('/run', (req, res) => {
   const { domain, cmd } = req.body;
   if (!domain || !cmd) return res.redirect('/');
+  // Validate domain before executing arbitrary commands for the site
+  if (!isValidDomain(domain)) return res.status(400).send('Invalid domain');
   const sites = loadSites();
   const site = sites.find(s => s.domain === domain);
   if (!site) return res.redirect('/');
@@ -657,6 +692,8 @@ app.post('/run', (req, res) => {
 // Stop a running command started via the Run button.
 app.post('/stop', (req, res) => {
   const { domain } = req.body;
+  // If a domain is provided ensure it passes validation before attempting to stop
+  if (domain && !isValidDomain(domain)) return res.status(400).send('Invalid domain');
   if (domain) stopSiteCommand(domain);
   res.redirect('/');
 });
@@ -664,6 +701,8 @@ app.post('/stop', (req, res) => {
 // Render the SSL configuration form for a specific domain
 app.get('/ssl/:domain', (req, res) => {
   const { domain } = req.params;
+  // Validate domain used to render SSL configuration form
+  if (!isValidDomain(domain)) return res.status(400).send('Invalid domain');
   res.render('ssl', { domain });
 });
 
@@ -674,6 +713,8 @@ app.post('/ssl/:domain', upload.fields([
   { name: 'bundle', maxCount: 1 }
 ]), async (req, res) => {
   const { domain } = req.params;
+  // Verify domain to avoid writing certificate files to unexpected locations
+  if (!isValidDomain(domain)) return res.status(400).send('Invalid domain');
   let { cert, key } = req.body;
 
   try {
@@ -740,8 +781,13 @@ app.post('/ssl/:domain', upload.fields([
 
 // Manual endpoint to trigger the SSL test from the browser
 app.get('/ssl/:domain/test', async (req, res) => {
+  const { domain } = req.params;
+  // Reject invalid domains before running the SSL test command
+  if (!isValidDomain(domain)) {
+    return res.status(400).json({ ok: false, error: 'Invalid domain' });
+  }
   try {
-    const result = await testSsl(req.params.domain);
+    const result = await testSsl(domain);
     res.json(result);
   } catch (err) {
     res.status(500).json({ ok: false, error: err.toString() });
@@ -751,6 +797,8 @@ app.get('/ssl/:domain/test', async (req, res) => {
 // Serve the generated nginx config for a specific site
 app.get('/config/:domain', (req, res) => {
   const { domain } = req.params;
+  // Ensure the domain is well-formed before reading configuration files
+  if (!isValidDomain(domain)) return res.status(400).send('Invalid domain');
   const configPath = path.join(__dirname, 'generated_configs', domain);
   // If the config file doesn't exist, inform the user
   if (!fs.existsSync(configPath)) {
