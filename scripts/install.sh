@@ -5,6 +5,10 @@
 
 set -e
 
+# Determine the directory of this script so npm install runs from the project root
+# even when the script is executed from another location.
+DIR="$(cd "$(dirname "$0")" && pwd)"
+
 # Update package index
 sudo apt-get update
 
@@ -12,8 +16,10 @@ sudo apt-get update
 # so there's no need to install the separate npm package.
 sudo apt-get install -y nodejs nginx git
 
-# Install Node.js dependencies for BlockHead
-npm install
+# Install Node.js dependencies for BlockHead from the project root. Using the
+# script's path ensures the correct location regardless of the current working
+# directory when this script is invoked.
+(cd "$DIR/.." && npm install)
 
 # Create directories if they don't exist
 mkdir -p backups generated_configs
@@ -24,6 +30,9 @@ mkdir -p backups generated_configs
 # BlockHead server can clone repositories there without permission
 # errors.
 sudo mkdir -p /var/www
-sudo chown "$USER":"$USER" /var/www
+# Use the user who invoked sudo (if any) to own /var/www, falling back to the
+# current user when not running under sudo. This allows non-root users to write
+# to the directory.
+sudo chown "${SUDO_USER:-$USER}":"${SUDO_USER:-$USER}" /var/www
 
 echo "Installation complete. Start the server with 'node server.js'"
