@@ -493,12 +493,25 @@ app.post('/new', async (req, res) => {
     // dependencies and launch the app automatically. This assumes the
     // project defines a standard "start" script.
     const pkgPath = path.join(root, 'package.json');
+    // Look for a Python requirements file so we can handle Python projects too
+    const requirementsPath = path.join(root, 'requirements.txt');
     if (fs.existsSync(pkgPath)) {
       console.log(`Installing dependencies for ${domain}`);
       try {
         await runCommand('npm install', root);
       } catch (installErr) {
         console.error('Install failed:', installErr);
+      }
+    }
+
+    if (fs.existsSync(requirementsPath)) {
+      // When a Python project is detected, prepare a virtual environment and
+      // install its dependencies so the app has everything it needs to run.
+      console.log(`Installing Python dependencies for ${domain}`);
+      try {
+        await runCommand('python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt', root);
+      } catch (pyInstallErr) {
+        console.error('Python install failed:', pyInstallErr);
       }
     }
 
