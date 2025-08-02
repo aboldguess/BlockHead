@@ -14,6 +14,11 @@
             <div class="alert alert-success">Settings saved.</div>
         <% } %>
 
+        <!-- Display error details when nginx reload fails -->
+        <% if (error) { %>
+            <div class="alert alert-danger"><%= error %></div>
+        <% } %>
+
         <% if (!sites.length) { %>
             <!-- Warn when no sites are configured so there is nothing to edit -->
             <div class="alert alert-warning">No sites configured.</div>

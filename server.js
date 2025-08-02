@@ -137,7 +137,9 @@ app.get('/nginx', (req, res) => {
   res.render('nginx', {
     sites,
     site,
-    saved: Boolean(req.query.saved)
+    saved: Boolean(req.query.saved),
+    // Forward any error details so the template can inform the user
+    error: req.query.error
   });
 });
 
@@ -158,7 +160,12 @@ app.post('/nginx', async (req, res) => {
   try {
     await enableSite(site.domain);
   } catch (err) {
-    console.error('Failed to enable site:', err.message);
+    // If enabling the site fails, redirect with a helpful hint so operators
+    // can manually run the helper script and investigate further.
+    const hint = `Run \`sudo ./scripts/enable_site.sh ${site.domain}\` manually`;
+    return res.redirect(
+      `/nginx?site=${domain}&saved=0&error=${encodeURIComponent(`Failed to enable site: ${err.message}. ${hint}`)}`
+    );
   }
   res.redirect(`/nginx?site=${domain}&saved=1`);
 });
@@ -613,9 +620,12 @@ app.post('/new', async (req, res) => {
   try {
     await enableSite(site.domain);
   } catch (err) {
-    // Surfacing the error helps operators diagnose problems such as nginx
-    // failing to reload.
-    return res.status(500).send(`Failed to enable site: ${err.message}`);
+    // Include a hint so users can attempt to run the helper script themselves
+    // if nginx refuses to reload automatically.
+    const hint = `Run \`sudo ./scripts/enable_site.sh ${site.domain}\` manually`;
+    return res
+      .status(500)
+      .send(`Failed to enable site: ${err.message}. ${hint}`);
   }
   res.redirect('/');
 });
