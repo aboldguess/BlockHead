@@ -53,10 +53,15 @@ npm install
     </ol>
 
     <h3>4. Configure DNS in GoDaddy</h3>
+    <!-- Provide both automated and manual DNS configuration options -->
     <ol>
-        <li>Log into GoDaddy and locate your domain's DNS settings.</li>
-        <li>Create an <strong>A record</strong> pointing to your server's public IP (e.g. <code>193.237.136.211</code>).</li>
-        <li>Save the record and wait for DNS to propagate.</li>
+        <!-- Step: obtain API credentials -->
+        <li>Create a GoDaddy API key and secret by visiting <a href="https://developer.godaddy.com/keys">GoDaddy's developer portal</a>. Select the <em>Production</em> environment and ensure the key has permission to manage DNS records.</li>
+        <!-- Step: use the Setup DNS form -->
+        <li>In BlockHead's main page, enter the API key and secret next to your domain and press <em>Setup DNS</em> to automatically create an <strong>A record</strong> pointing to your server's public IP.</li>
+        <!-- Step: when to fall back to manual changes or sudo operations -->
+        <li>If the API request fails, lacks permissions, or you skip the API, log into GoDaddy's DNS manager and create the <strong>A record</strong> manually. The API call does not require <code>sudo</code>, but enabling Nginx still does—run <code>sudo ./scripts/enable_site.sh your-domain</code> if the automatic server setup fails.</li>
+        <li>Save the DNS record and allow time for propagation.</li>
     </ol>
 
     <h3>5. Forward ports on your router</h3>
