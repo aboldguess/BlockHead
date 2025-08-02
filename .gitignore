@@ -3,3 +3,4 @@ server.log
 generated_configs/
 sites.json
 backups/
+ssl/

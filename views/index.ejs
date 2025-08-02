@@ -19,6 +19,7 @@
             <li><strong>Add New Site</strong> &ndash; register a domain and clone its repository. Specify the port if the app is dynamic.</li>
             <li><strong>Pull Latest</strong> &ndash; fetch updates from the site's Git repository.</li>
             <li><strong>Backup</strong> &ndash; download a zip of the site files and nginx config.</li>
+            <li><strong>Configure SSL</strong> &ndash; upload certificates for HTTPS.</li>
             <li><strong>View Config</strong> &ndash; open the generated nginx server block.</li>
             <li><strong>View via IP</strong> &ndash; open the site using the server IP (<%= serverIp %>).</li>
             <li><strong>View Site</strong> &ndash; open the site using its domain name.</li>
@@ -76,6 +77,8 @@
                     <input type="hidden" name="domain" value="<%= site.domain %>" />
                     <button type="submit" class="btn btn-secondary btn-sm">Backup</button>
                 </form>
+                <!-- Open SSL configuration page for this domain -->
+                <a class="btn btn-warning btn-sm" href="/ssl/<%= site.domain %>">Configure SSL</a>
                 <!-- Link to view the generated nginx config -->
                 <a class="btn btn-info btn-sm" href="/config/<%= site.domain %>" target="_blank">View Config</a>
                 <!-- Open the site via the server's IP address -->
