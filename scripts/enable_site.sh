@@ -8,6 +8,10 @@
 
 set -e
 
+# Determine the absolute path to this script's directory so path references
+# work regardless of the caller's current working directory.
+DIR="$(cd "$(dirname "$0")" && pwd)"
+
 # Abort unless running with root privileges since we write to /etc/nginx.
 if [ "$EUID" -ne 0 ]; then
   echo "This script must be run as root" >&2
@@ -33,7 +37,7 @@ if [ -z "$DOMAIN" ]; then
   exit 1
 fi
 
-CONFIG_DIR="$(dirname "$0")/../generated_configs"
+CONFIG_DIR="$DIR/../generated_configs"
 SOURCE="$CONFIG_DIR/$DOMAIN"
 TARGET="/etc/nginx/sites-available/$DOMAIN"
 
