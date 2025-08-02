@@ -12,6 +12,7 @@ const archiver = require('archiver');
 const extract = require('extract-zip'); // Used to unpack GoDaddy zip bundles
 const multer = require('multer'); // Middleware for handling certificate file uploads
 const http = require('http');
+const https = require('https'); // Used to determine the server's public IP
 // exec runs one-off shell commands while spawn is used below for
 // background processes such as starting an app server
 const { exec, spawn } = require('child_process');
@@ -62,24 +63,42 @@ console.error = (...args) => {
 // be terminated on demand.
 const runningProcs = {};
 
-// Determine the IP address used for the "Test via IP" feature. If the
-// SERVER_IP environment variable is set it takes precedence. Otherwise
-// we try to detect a non-internal IPv4 address so the user sees the
-// correct address for their LAN without manual configuration.
-function getLocalIp() {
-  const nets = os.networkInterfaces();
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name]) {
-      if (net.family === 'IPv4' && !net.internal) {
-        return net.address;
-      }
-    }
-  }
-  // Fallback to localhost if nothing was detected
-  return '127.0.0.1';
-}
+// Determine the public IP address used for the "Test via IP" feature and
+// DNS automation. The helper first attempts to query an external service
+// for the machine's outward-facing IP. If that request fails (for example,
+// due to lack of internet connectivity) the function falls back to a
+// user-specified environment variable (SERVER_IP).
+let serverIpCache = null;
 
-const SERVER_IP = process.env.SERVER_IP || getLocalIp();
+async function getServerIp() {
+  // Return the cached value when available so repeated calls avoid
+  // unnecessary network requests.
+  if (serverIpCache) return serverIpCache;
+
+  // Query ipify for the external IP address. The service returns the
+  // address as plain text in the response body.
+  try {
+    serverIpCache = await new Promise((resolve, reject) => {
+      https.get('https://api.ipify.org', res => {
+        let data = '';
+        res.on('data', chunk => (data += chunk));
+        res.on('end', () => {
+          if (res.statusCode === 200 && data.trim()) {
+            resolve(data.trim());
+          } else {
+            reject(new Error('Unexpected response from ipify'));
+          }
+        });
+      }).on('error', reject);
+    });
+    return serverIpCache;
+  } catch (err) {
+    // Detection failed: fall back to SERVER_IP or localhost as a final
+    // safety net so features depending on an IP still function.
+    serverIpCache = process.env.SERVER_IP || '127.0.0.1';
+    return serverIpCache;
+  }
+}
 
 // Validate that a domain contains only expected characters.
 // This protects file operations and shell commands from
@@ -416,10 +435,11 @@ app.get('/', async (req, res) => {
     site.status = statuses[idx];
   });
 
-  // Pass the server IP so the template can build the "Test via IP" commands
+  // Pass the detected server IP so the template can build "Test via IP" commands
+  const serverIp = await getServerIp();
   res.render('index', {
     sites,
-    serverIp: SERVER_IP,
+    serverIp,
     // Query parameters allow the DNS endpoint to communicate success/failure
     dns: req.query.dns || null,
     dnsError: req.query.error || null
@@ -751,7 +771,9 @@ app.post('/dns', async (req, res) => {
     return res.redirect('/?dns=0&error=' + encodeURIComponent('Missing GoDaddy API credentials'));
   }
   try {
-    await updateARecord(domain, SERVER_IP, key, secret);
+    // Resolve the machine's public IP before updating the DNS record
+    const ip = await getServerIp();
+    await updateARecord(domain, ip, key, secret);
     // Success path: DNS record was created/updated
     res.redirect('/?dns=1');
   } catch (err) {
@@ -873,16 +895,17 @@ app.get('/config/:domain', (req, res) => {
 
 // Perform a test request to the server's IP while sending a custom Host header
 // This allows operators to preview a site before DNS changes propagate
-app.get('/test/:domain', (req, res) => {
+app.get('/test/:domain', async (req, res) => {
   const { domain } = req.params;
   // Validate domain to avoid header injection or other attacks
   if (!isValidDomain(domain)) {
     return res.status(400).json({ ok: false, error: 'Invalid domain' });
   }
 
-  // Options for the HTTP request using the server IP but specifying the domain
+  // Options for the HTTP request using the detected server IP but specifying the domain
+  const serverIp = await getServerIp();
   const options = {
-    host: SERVER_IP,
+    host: serverIp,
     port: 80,
     path: '/',
     headers: { Host: domain },
