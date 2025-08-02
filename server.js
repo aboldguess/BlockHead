@@ -936,34 +936,42 @@ app.get('/test/:domain', async (req, res) => {
 
 // Generate an Nginx server block for a site
 function generateNginxConfig(site) {
-  // Determine if SSL files exist for this domain so we can include them
+  // Paths for certificate and key files used to enable HTTPS for a domain
   const certPath = path.join(SSL_DIR, `${site.domain}.crt`);
   const keyPath = path.join(SSL_DIR, `${site.domain}.key`);
+  // Determine if both certificate and key exist before adding TLS blocks
   const hasSsl = fs.existsSync(certPath) && fs.existsSync(keyPath);
 
   let config;
   if (site.port) {
     // Proxy dynamic applications running on a port
     if (hasSsl) {
-      // Include SSL directives when certificate and key are present
-      config = `server {\n  listen 80;\n  listen 443 ssl;\n  server_name ${site.domain};\n  ssl_certificate ${certPath};\n  ssl_certificate_key ${keyPath};\n  location / {\n    proxy_pass http://127.0.0.1:${site.port};\n    proxy_set_header Host $host;\n    proxy_set_header X-Real-IP $remote_addr;\n  }\n}`;
+      // When SSL files are present, build two server blocks:
+      // 1) port 80 block that redirects all traffic to HTTPS
+      // 2) port 443 block that proxies to the application and includes certs
+      config = `server {\n  listen 80;\n  server_name ${site.domain};\n  return 301 https://$host$request_uri;\n}\nserver {\n  listen 443 ssl;\n  server_name ${site.domain};\n  ssl_certificate ${certPath};\n  ssl_certificate_key ${keyPath};\n  location / {\n    proxy_pass http://127.0.0.1:${site.port};\n    proxy_set_header Host $host;\n    proxy_set_header X-Real-IP $remote_addr;\n  }\n}`;
     } else {
+      // Without SSL the server only listens on port 80
       config = `server {\n  listen 80;\n  server_name ${site.domain};\n  location / {\n    proxy_pass http://127.0.0.1:${site.port};\n    proxy_set_header Host $host;\n    proxy_set_header X-Real-IP $remote_addr;\n  }\n}`;
     }
   } else {
-    // Configuration for static files
+    // Configuration for static file sites
     if (hasSsl) {
-      config = `server {\n  listen 80;\n  listen 443 ssl;\n  server_name ${site.domain};\n  ssl_certificate ${certPath};\n  ssl_certificate_key ${keyPath};\n  root ${site.root};\n  index index.html index.htm;\n  location / {\n    try_files $uri $uri/ =404;\n  }\n}`;
+      // Similar two-block approach for static sites
+      config = `server {\n  listen 80;\n  server_name ${site.domain};\n  return 301 https://$host$request_uri;\n}\nserver {\n  listen 443 ssl;\n  server_name ${site.domain};\n  ssl_certificate ${certPath};\n  ssl_certificate_key ${keyPath};\n  root ${site.root};\n  index index.html index.htm;\n  location / {\n    try_files $uri $uri/ =404;\n  }\n}`;
     } else {
+      // Plain HTTP block serving static files
       config = `server {\n  listen 80;\n  server_name ${site.domain};\n  root ${site.root};\n  index index.html index.htm;\n  location / {\n    try_files $uri $uri/ =404;\n  }\n}`;
     }
   }
+
   const outputDir = path.join(__dirname, 'generated_configs');
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
   fs.writeFileSync(path.join(outputDir, site.domain), config);
   // Let the operator know the config file was created
   console.log(`Nginx config generated for ${site.domain} (port ${site.port || 'static'})`);
 }
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
