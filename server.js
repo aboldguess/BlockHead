@@ -196,17 +196,25 @@ function startApp(cwd, port) {
   child.unref();
 }
 
-// Enable a site at the Nginx level by running the helper script. This copies
-// the generated config into /etc/nginx and reloads the server. We run it in the
-// background and simply log any output. If the command fails (for example
-// because sudo requires a password) the user can run the script manually.
+// Enable a site at the Nginx level by running the helper script. The command is
+// wrapped in a promise so callers can "await" it and handle failures. If nginx
+// cannot reload (for example, the service is misconfigured), the promise
+// rejects with the stderr output so the caller can surface a clear message to
+// the user instead of silently redirecting.
 function enableSite(domain) {
-  exec(`bash scripts/enable_site.sh ${domain}`,(err, stdout, stderr) => {
-    if (err) {
-      console.error(`Auto-enable failed for ${domain}:`, stderr.trim());
-    } else if (stdout) {
-      console.log(stdout.trim());
-    }
+  return new Promise((resolve, reject) => {
+    exec(`bash scripts/enable_site.sh ${domain}`, (err, stdout, stderr) => {
+      if (err) {
+        const message = stderr.trim() || err.message;
+        console.error(`Auto-enable failed for ${domain}: ${message}`);
+        return reject(new Error(message));
+      }
+      if (stdout) {
+        // Surface any helpful output from the script such as success messages
+        console.log(stdout.trim());
+      }
+      resolve();
+    });
   });
 }
 
@@ -430,8 +438,16 @@ app.post('/new', async (req, res) => {
   sites.push(site);
   saveSites(sites);
   generateNginxConfig(site);
-  // Try to automatically enable the site so nginx starts serving it
-  enableSite(site.domain);
+  // Try to automatically enable the site so nginx starts serving it. Awaiting
+  // the helper ensures we know if nginx rejected the config and can inform the
+  // user instead of silently failing.
+  try {
+    await enableSite(site.domain);
+  } catch (err) {
+    // Surfacing the error helps operators diagnose problems such as nginx
+    // failing to reload.
+    return res.status(500).send(`Failed to enable site: ${err.message}`);
+  }
   res.redirect('/');
 });
 
@@ -624,7 +640,13 @@ app.post('/ssl/:domain', upload.fields([
   const site = sites.find(s => s.domain === domain);
   if (site) {
     generateNginxConfig(site);
-    enableSite(site.domain);
+    // Enabling the site may fail if nginx cannot reload, so await the helper
+    // and surface errors to the client rather than silently logging.
+    try {
+      await enableSite(site.domain);
+    } catch (err) {
+      return res.status(500).send(`Failed to enable site: ${err.message}`);
+    }
   }
 
   // Automatically verify the installed certificate and log the result
