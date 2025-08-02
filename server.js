@@ -18,6 +18,8 @@ const os = require('os');
 const app = express();
 const PORT = 3000; // Change to 80 if running as root for HTTP
 const DATA_FILE = path.join(__dirname, 'sites.json');
+// Absolute path to the main nginx configuration file. Adjust if nginx is installed elsewhere.
+const NGINX_CONF = '/etc/nginx/nginx.conf';
 
 // --------------------------------------
 // Simple in-memory log store used by the
@@ -77,6 +79,50 @@ app.use(express.static(path.join(__dirname, 'public')));
 // to retrieve recent log messages as JSON.
 app.get('/logs', (req, res) => {
   res.json(logs);
+});
+
+// --------------------------------------
+// Nginx configuration editor endpoints
+// --------------------------------------
+
+// Display the current nginx configuration inside a textarea so
+// the operator can inspect or modify it via the browser.
+app.get('/nginx', (req, res) => {
+  let configContent = '';
+  try {
+    // Attempt to read the existing nginx.conf file from disk
+    configContent = fs.readFileSync(NGINX_CONF, 'utf8');
+  } catch (err) {
+    // If reading fails, show the error in the editor for transparency
+    configContent = `# Unable to read ${NGINX_CONF}\n# ${err.message}`;
+  }
+  // Render the nginx.ejs template with the current config and file path
+  res.render('nginx', { config: configContent, nginxPath: NGINX_CONF });
+});
+
+// Persist changes to the nginx configuration file
+app.post('/nginx', (req, res) => {
+  const { config } = req.body;
+  if (typeof config === 'string') {
+    try {
+      // Write the updated configuration directly to nginx.conf
+      fs.writeFileSync(NGINX_CONF, config);
+      // Validate syntax and reload nginx so changes take effect immediately
+      exec('nginx -t && nginx -s reload', err => {
+        if (err) {
+          // Log failures so the user can troubleshoot syntax errors
+          console.error('Nginx reload failed:', err);
+        } else {
+          console.log('Nginx reloaded with new configuration');
+        }
+      });
+    } catch (err) {
+      // Capture any filesystem related errors
+      console.error('Saving nginx config failed:', err);
+    }
+  }
+  // Redirect back to the editor so the user can confirm the changes
+  res.redirect('/nginx');
 });
 
 // Utility function to load site data from JSON file
