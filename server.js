@@ -67,7 +67,9 @@ const runningProcs = {};
 // DNS automation. The helper first attempts to query an external service
 // for the machine's outward-facing IP. If that request fails (for example,
 // due to lack of internet connectivity) the function falls back to a
-// user-specified environment variable (SERVER_IP).
+// user-specified environment variable (SERVER_IP). If neither method
+// succeeds the function returns null so callers can surface the issue and
+// instruct operators to configure SERVER_IP manually.
 let serverIpCache = null;
 
 async function getServerIp() {
@@ -93,10 +95,18 @@ async function getServerIp() {
     });
     return serverIpCache;
   } catch (err) {
-    // Detection failed: fall back to SERVER_IP or localhost as a final
-    // safety net so features depending on an IP still function.
-    serverIpCache = process.env.SERVER_IP || '127.0.0.1';
-    return serverIpCache;
+    // Detection failed: log the error and attempt to use a manually supplied
+    // IP address. Operators can set SERVER_IP in environments where outbound
+    // requests are blocked or the machine lacks internet access.
+    console.error('Public IP detection failed:', err.message);
+    const fallback = process.env.SERVER_IP;
+    if (fallback) {
+      serverIpCache = fallback;
+      return serverIpCache;
+    }
+    // No reliable IP could be determined; return null so callers can inform
+    // users to configure the SERVER_IP environment variable themselves.
+    return null;
   }
 }
 
@@ -812,8 +822,18 @@ app.post('/dns', async (req, res) => {
     return res.redirect('/?dns=0&error=' + encodeURIComponent('Missing GoDaddy API credentials'));
   }
   try {
-    // Resolve the machine's public IP before updating the DNS record
+    // Resolve the machine's public IP before updating the DNS record. The
+    // helper returns null when the address cannot be determined, signaling
+    // the operator to provide it manually via SERVER_IP.
     const ip = await getServerIp();
+    if (!ip) {
+      return res.redirect(
+        '/?dns=0&error=' +
+          encodeURIComponent(
+            'Unable to determine server IP. Set the SERVER_IP environment variable and retry.'
+          )
+      );
+    }
     await updateARecord(domain, ip, key, secret);
     // Success path: DNS record was created/updated
     res.redirect('/?dns=1');
