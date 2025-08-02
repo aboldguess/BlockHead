@@ -56,8 +56,10 @@ console.error = (...args) => {
   if (logs.length > 200) logs.shift();
 };
 
-// Keep track of child processes started via the Run button. Each domain maps
-// to a spawned process so we can terminate it later using the Stop button.
+// Keep track of child processes started for each domain. Entries are added
+// whenever a site is launched (either through a custom command or the
+// standard npm start). The /stop endpoint consults this map so processes can
+// be terminated on demand.
 const runningProcs = {};
 
 // Determine the IP address used for the "Test via IP" feature. If the
@@ -266,9 +268,9 @@ function testSsl(domain) {
   });
 }
 
-// Start an application using the standard "npm start" script in detached mode.
-// The process continues running independently of this Node server.
-function startApp(cwd, port) {
+// Start an application using the standard "npm start" script in detached mode
+// and record the child process so it can be stopped later.
+function startApp(domain, cwd, port) {
   // Pass the PORT environment variable when a port is provided so
   // frameworks that rely on process.env.PORT (like Express) pick it up.
   const env = { ...process.env };
@@ -286,6 +288,9 @@ function startApp(cwd, port) {
     console.error(`Failed to start npm app in ${cwd}: ${err.message}`);
   });
   child.unref();
+  // Track the process by domain so it can be terminated via /stop.
+  runningProcs[domain] = child;
+  console.log(`Started npm app for ${domain} (pid ${child.pid})`);
 }
 
 // Enable a site at the Nginx level by running the helper script. The command is
@@ -344,8 +349,9 @@ function runSiteCommand(domain, cmd, cwd, port) {
   console.log(`Started "${cmd}" for ${domain} (pid ${child.pid})`);
 }
 
-// Stop a running command previously started via runSiteCommand. If the process
-// is found, kill its process group so any children are also terminated.
+// Stop a running process previously started via runSiteCommand or startApp.
+// The child is looked up by domain and its process group is killed so any
+// spawned children exit as well.
 function stopSiteCommand(domain) {
   const child = runningProcs[domain];
   if (child) {
@@ -529,7 +535,7 @@ app.post('/new', async (req, res) => {
     } else if (fs.existsSync(pkgPath)) {
       // Fall back to the standard npm start workflow
       console.log(`Starting application for ${domain} on port ${port}`);
-      startApp(root, port);
+      startApp(domain, root, port);
     }
   } catch (err) {
     console.error('Clone error:', err);
@@ -602,7 +608,7 @@ app.post('/update', async (req, res) => {
     } else if (fs.existsSync(path.join(site.root, 'package.json')))
     {
       console.log(`Restarting application for ${domain} on port ${site.port}`);
-      startApp(site.root, site.port);
+      startApp(domain, site.root, site.port);
     }
   } catch (err) {
     console.error(err);
@@ -710,7 +716,7 @@ app.post('/run', (req, res) => {
   res.redirect('/');
 });
 
-// Stop a running command started via the Run button.
+// Stop a running site by looking up its stored child process and killing it.
 app.post('/stop', (req, res) => {
   const { domain } = req.body;
   // If a domain is provided ensure it passes validation before attempting to stop
