@@ -9,6 +9,8 @@ const path = require('path');
 const fs = require('fs');
 const simpleGit = require('simple-git');
 const archiver = require('archiver');
+const extract = require('extract-zip'); // Used to unpack GoDaddy zip bundles
+const multer = require('multer'); // Middleware for handling certificate file uploads
 const http = require('http');
 // exec runs one-off shell commands while spawn is used below for
 // background processes such as starting an app server
@@ -22,6 +24,9 @@ const SSL_DIR = path.join(__dirname, 'ssl'); // Folder for user-provided SSL cer
 // Absolute path to the main nginx configuration file. This is used by the
 // new configuration editor so operators can tweak settings directly from the UI.
 const NGINX_CONFIG = '/etc/nginx/nginx.conf';
+
+// Configure Multer to store uploaded cert bundles in a temporary directory
+const upload = multer({ dest: path.join(__dirname, 'uploads') });
 
 // --------------------------------------
 // Simple in-memory log store used by the
@@ -150,6 +155,21 @@ function runCommand(cmd, cwd) {
         if (stdout) console.log(stdout.trim());
         resolve();
       }
+    });
+  });
+}
+
+// Perform a basic SSL check using openssl to confirm certificates are served
+// correctly. The function resolves with an object describing the outcome so
+// callers can log or display the result.
+function testSsl(domain) {
+  return new Promise((resolve, reject) => {
+    exec(`openssl s_client -servername ${domain} -connect ${domain}:443 < /dev/null`, (err, stdout, stderr) => {
+      if (err) {
+        return reject(stderr || err.message);
+      }
+      const ok = stdout.includes('Verify return code: 0 (ok)');
+      resolve({ ok, output: stdout + stderr });
     });
   });
 }
@@ -558,9 +578,40 @@ app.get('/ssl/:domain', (req, res) => {
 });
 
 // Accept certificate and key data then regenerate the Nginx config
-app.post('/ssl/:domain', (req, res) => {
+app.post('/ssl/:domain', upload.fields([
+  { name: 'certFile', maxCount: 1 },
+  { name: 'keyFile', maxCount: 1 },
+  { name: 'bundle', maxCount: 1 }
+]), async (req, res) => {
   const { domain } = req.params;
-  const { cert, key } = req.body;
+  let { cert, key } = req.body;
+
+  try {
+    // Uploaded individual certificate and key files take precedence over text areas
+    if (req.files?.certFile) {
+      cert = fs.readFileSync(req.files.certFile[0].path, 'utf8');
+      fs.unlinkSync(req.files.certFile[0].path);
+    }
+    if (req.files?.keyFile) {
+      key = fs.readFileSync(req.files.keyFile[0].path, 'utf8');
+      fs.unlinkSync(req.files.keyFile[0].path);
+    }
+    // Handle a GoDaddy-style zip bundle containing the certificate and key
+    if (req.files?.bundle) {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ssl-'));
+      await extract(req.files.bundle[0].path, { dir: tmpDir });
+      fs.unlinkSync(req.files.bundle[0].path);
+      const files = fs.readdirSync(tmpDir);
+      const certCandidate = files.find(f => f.endsWith('.crt') || f.endsWith('.pem'));
+      const keyCandidate = files.find(f => f.endsWith('.key') || f.toLowerCase().includes('private'));
+      if (certCandidate) cert = fs.readFileSync(path.join(tmpDir, certCandidate), 'utf8');
+      if (keyCandidate) key = fs.readFileSync(path.join(tmpDir, keyCandidate), 'utf8');
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  } catch (err) {
+    console.error('Failed to process uploaded certificate:', err.message);
+  }
+
   if (!cert || !key) return res.status(400).send('Certificate and key required');
 
   // Ensure the ssl storage directory exists before writing files
@@ -576,7 +627,29 @@ app.post('/ssl/:domain', (req, res) => {
     enableSite(site.domain);
   }
 
+  // Automatically verify the installed certificate and log the result
+  try {
+    const result = await testSsl(domain);
+    if (result.ok) {
+      console.log(`SSL test passed for ${domain}`);
+    } else {
+      console.error(`SSL test failed for ${domain}: ${result.output}`);
+    }
+  } catch (err) {
+    console.error(`SSL test failed for ${domain}:`, err);
+  }
+
   res.redirect('/');
+});
+
+// Manual endpoint to trigger the SSL test from the browser
+app.get('/ssl/:domain/test', async (req, res) => {
+  try {
+    const result = await testSsl(req.params.domain);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.toString() });
+  }
 });
 
 // Serve the generated nginx config for a specific site
