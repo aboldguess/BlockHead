@@ -561,7 +561,13 @@ app.post('/new', async (req, res) => {
       // install its dependencies so the app has everything it needs to run.
       console.log(`Installing Python dependencies for ${domain}`);
       try {
-        await runCommand('python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt', root);
+        // Call pip via "python3 -m" so systems without a dedicated
+        // pip executable (a common scenario on minimal setups) can
+        // still resolve the module and install the requirements file.
+        await runCommand(
+          'python3 -m venv .venv && . .venv/bin/activate && python3 -m pip install -r requirements.txt',
+          root
+        );
       } catch (pyInstallErr) {
         console.error('Python install failed:', pyInstallErr);
       }
