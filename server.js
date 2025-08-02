@@ -588,8 +588,11 @@ app.post('/new', async (req, res) => {
       console.log(`Starting application for ${domain} on port ${port}`);
       startApp(domain, root, port);
     } else if (pythonEntry) {
-      // Launch detected Python entry point as a sensible default
-      const pyCmd = `python ${pythonEntry}`;
+      // Launch detected Python entry point. We explicitly activate the
+      // project's virtual environment so the script runs with the
+      // dependencies installed in requirements.txt instead of whatever
+      // global Python packages might be present on the system.
+      const pyCmd = `. .venv/bin/activate && python3 ${pythonEntry}`;
       console.log(`Starting ${domain} with default command: ${pyCmd}`);
       runSiteCommand(domain, pyCmd, root, port);
     }
