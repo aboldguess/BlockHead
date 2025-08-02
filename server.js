@@ -60,7 +60,7 @@ console.error = (...args) => {
 // to a spawned process so we can terminate it later using the Stop button.
 const runningProcs = {};
 
-// Determine the IP address used for the "View via IP" links. If the
+// Determine the IP address used for the "Test via IP" feature. If the
 // SERVER_IP environment variable is set it takes precedence. Otherwise
 // we try to detect a non-internal IPv4 address so the user sees the
 // correct address for their LAN without manual configuration.
@@ -401,7 +401,7 @@ app.get('/', async (req, res) => {
     site.status = statuses[idx];
   });
 
-  // Pass the server IP so the template can build the "View via IP" links
+  // Pass the server IP so the template can build the "Test via IP" commands
   res.render('index', {
     sites,
     serverIp: SERVER_IP,
@@ -854,6 +854,46 @@ app.get('/config/:domain', (req, res) => {
   }
   // Display the config as plain text in the browser
   res.type('text/plain').send(fs.readFileSync(configPath));
+});
+
+// Perform a test request to the server's IP while sending a custom Host header
+// This allows operators to preview a site before DNS changes propagate
+app.get('/test/:domain', (req, res) => {
+  const { domain } = req.params;
+  // Validate domain to avoid header injection or other attacks
+  if (!isValidDomain(domain)) {
+    return res.status(400).json({ ok: false, error: 'Invalid domain' });
+  }
+
+  // Options for the HTTP request using the server IP but specifying the domain
+  const options = {
+    host: SERVER_IP,
+    port: 80,
+    path: '/',
+    headers: { Host: domain },
+    timeout: 5000
+  };
+
+  const reqTest = http.request(options, resp => {
+    let body = '';
+    resp.on('data', chunk => body += chunk.toString());
+    resp.on('end', () => {
+      // Return status code and a snippet of the body for quick verification
+      res.json({ ok: true, status: resp.statusCode, body: body.slice(0, 100) });
+    });
+  });
+
+  // Surface connection errors to the client
+  reqTest.on('error', err => {
+    res.json({ ok: false, error: err.message });
+  });
+
+  reqTest.on('timeout', () => {
+    reqTest.destroy();
+    res.json({ ok: false, error: 'Request timed out' });
+  });
+
+  reqTest.end();
 });
 
 // Generate an Nginx server block for a site
