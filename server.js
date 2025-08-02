@@ -266,8 +266,16 @@ function saveSites(sites) {
 // Run a shell command and return a promise that resolves when it completes.
 // Output is logged so the user can troubleshoot install/start failures.
 function runCommand(cmd, cwd) {
+  // The default exec buffer is only ~200KB which is easily exceeded by commands
+  // like "npm install" that produce verbose output. An overflow would truncate
+  // logs and reject the promise, so we raise the limit to 10MB. For truly large
+  // or streaming output consider refactoring to use child_process.spawn.
+  const options = {
+    cwd,
+    maxBuffer: 10 * 1024 * 1024 // Allow up to 10MB of output before failing
+  };
   return new Promise((resolve, reject) => {
-    exec(cmd, { cwd }, (err, stdout, stderr) => {
+    exec(cmd, options, (err, stdout, stderr) => {
       if (err) {
         console.error(`Command failed: ${cmd}\n${stderr}`);
         reject(err);
