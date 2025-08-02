@@ -265,21 +265,25 @@ function enableSite(domain) {
   });
 }
 
-// Spawn a custom command for a site. The command string is split by spaces to
-// form the executable and its arguments. The resulting child process is stored
-// so it can be terminated later.
+// Spawn a custom command for a site. The entire command string is executed by
+// the system shell rather than manually splitting into executable and
+// arguments. The resulting child process is stored so it can be terminated later.
 function runSiteCommand(domain, cmd, cwd, port) {
-  const [exe, ...args] = cmd.split(' ');
   // Preserve the existing environment but inject PORT if provided so
   // scripts that rely on process.env.PORT still work.
   const env = { ...process.env };
   if (port) env.PORT = port;
 
-  const child = spawn(exe, args, {
+  // Use a shell to interpret the complete command string. The `shell: true`
+  // option is required for multi-word commands (e.g. "npm run start") to run
+  // correctly, but avoid passing untrusted input here since it will be executed
+  // by the shell.
+  const child = spawn(cmd, {
     cwd,
     env,
     detached: true,
     stdio: 'ignore',
+    shell: true,
   });
   // Surface spawn errors such as missing executables. Without this
   // feedback it can appear as if the process simply never started.
