@@ -18,11 +18,11 @@
         <ol class="mb-2">
             <li>Paste the entire certificate including the <code>-----BEGIN CERTIFICATE-----</code> and <code>-----END CERTIFICATE-----</code> lines.</li>
             <li>Paste the matching private key starting with <code>-----BEGIN PRIVATE KEY-----</code>.</li>
-            <li>Example: to obtain a free Let's Encrypt certificate you might run <code>certbot certonly --manual -d <%= domain %></code> and copy the generated files here.</li>
+            <li>Or upload the individual <code>.pem/.crt</code> and <code>.key</code> files, or a GoDaddy <code>.zip</code> bundle.</li>
         </ol>
         <p class="mb-0">After saving, BlockHead will update the Nginx config and attempt to reload the site.</p>
     </div>
-    <form action="/ssl/<%= domain %>" method="post">
+    <form action="/ssl/<%= domain %>" method="post" enctype="multipart/form-data">
         <div class="mb-3">
             <label class="form-label">Certificate
                 <textarea class="form-control" name="cert" rows="6" placeholder="-----BEGIN CERTIFICATE-----\n..."></textarea>
@@ -33,10 +33,40 @@
                 <textarea class="form-control" name="key" rows="6" placeholder="-----BEGIN PRIVATE KEY-----\n..."></textarea>
             </label>
         </div>
+        <div class="mb-3">
+            <label class="form-label">Upload Certificate File
+                <input class="form-control" type="file" name="certFile" accept=".pem,.crt">
+            </label>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Upload Private Key File
+                <input class="form-control" type="file" name="keyFile" accept=".pem,.key">
+            </label>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Upload GoDaddy Zip Bundle
+                <input class="form-control" type="file" name="bundle" accept=".zip">
+            </label>
+        </div>
         <button type="submit" class="btn btn-primary">Install</button>
+        <button type="button" id="testBtn" class="btn btn-secondary ms-2">Test SSL</button>
         <a href="/" class="btn btn-link">Back to List</a>
     </form>
+    <div id="testResult" class="mt-3"></div>
     </div>
 <%- include("partials/log-panel") %>
+<script>
+// Trigger the SSL test endpoint and display the result inline on the page
+document.getElementById('testBtn').addEventListener('click', async () => {
+    const res = await fetch('/ssl/<%= domain %>/test');
+    const data = await res.json();
+    const container = document.getElementById('testResult');
+    if (data.ok) {
+        container.innerHTML = '<div class="alert alert-success">SSL test passed</div>';
+    } else {
+        container.innerHTML = '<div class="alert alert-danger">SSL test failed: ' + (data.error || 'see logs') + '</div>';
+    }
+});
+</script>
 </body>
 </html>

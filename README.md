@@ -12,6 +12,7 @@ For a detailed walkthrough see the in-app help page at `/help` once the server i
 - Delete site configuration
 - Download a zip backup of any site
 - View the generated Nginx config for each site directly from the web UI
+- Upload SSL certificates via paste, individual files, or GoDaddy-provided zip bundles with automated testing
 - Modern Bootstrap-based interface for easy management
 - Diagnostic status checks displayed as traffic light indicators
 
@@ -62,6 +63,11 @@ For a detailed walkthrough see the in-app help page at `/help` once the server i
    - From another device on your network open `http://<server-ip>:3000` to confirm the BlockHead UI loads.
    - Open `http://<server-ip>` to check that a site is served by nginx after running `enable_site.sh`.
    - If these work locally but fail from the internet, forward port **80** (and optionally **3000** for the UI) on your router to the server's LAN IP.
+
+10. **Install and test SSL certificates**
+    - Click **Configure SSL** for your domain.
+    - Paste the certificate and key or upload the relevant `.pem/.crt/.key` files or GoDaddy `.zip` bundle.
+    - After installing, use the **Test SSL** button or visit `/ssl/your-domain/test` to verify the certificate.
 
 ## Migrating to a new server
 
@@ -133,6 +139,28 @@ sudo ./scripts/fix_site.sh your-domain
 
 This copies the generated config into `/etc/nginx`, enables the site and
 reloads nginx.
+
+### SSL certificate issues
+
+BlockHead automatically runs a basic `openssl` check after you upload a certificate.
+If HTTPS still fails:
+
+1. Verify the certificate and key pair:
+   ```bash
+   openssl x509 -in ssl/example.com.crt -noout
+   openssl rsa -in ssl/example.com.key -check
+   ```
+2. Ensure nginx can load the files:
+   ```bash
+   sudo nginx -t && sudo nginx -s reload
+   ```
+3. Test the public endpoint from the server:
+   ```bash
+   openssl s_client -connect example.com:443 -servername example.com
+   ```
+   A successful handshake ends with `Verify return code: 0 (ok)`.
+
+If problems persist, confirm that DNS points to your server and that port 443 is accessible.
 
 ## Warning
 
