@@ -8,7 +8,8 @@ set -e
 # Update package index
 sudo apt-get update
 
-# Install system packages. NodeSource's nodejs already includes npm.
+# Install system packages. NodeSource's nodejs package already bundles npm,
+# so there's no need to install the separate npm package.
 sudo apt-get install -y nodejs nginx git
 
 # Install Node.js dependencies for BlockHead
