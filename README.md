@@ -18,6 +18,13 @@ For a detailed walkthrough see the in-app help page at `/help` once the server i
 
 ## Getting Started
 
+0. **(Optional) Create a Python virtual environment**
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+   This isolates any Python tools you may install while working with BlockHead.
+
 1. **Install dependencies**
    ```bash
    npm install
@@ -71,6 +78,22 @@ For a detailed walkthrough see the in-app help page at `/help` once the server i
     - Click **Configure SSL** for your domain.
     - Paste the certificate and key or upload the relevant `.pem/.crt/.key` files or GoDaddy `.zip` bundle.
     - After installing, use the **Test SSL** button or visit `/ssl/your-domain/test` to verify the certificate.
+
+## Resetting the environment
+
+If you need to completely remove BlockHead, all hosted sites, and Nginx itself, run:
+
+```bash
+./scripts/nuke.sh
+```
+
+The main UI also exposes a **Nuclear Option** button which triggers the same script. After running it you can reinstall dependencies and Nginx with:
+
+```bash
+./scripts/install.sh
+```
+
+or use the **Setup** button on the main page.
 
 ## Migrating to a new server
 

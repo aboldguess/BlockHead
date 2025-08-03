@@ -48,6 +48,13 @@
     <a class="btn btn-info mb-3 ms-2" href="/help">Help</a>
     <!-- Open the nginx configuration UI (simple mode by default) -->
     <a class="btn btn-outline-primary mb-3 ms-2" href="/nginx">Nginx Config</a>
+    <!-- Buttons to reinstall or wipe the environment entirely -->
+    <form action="/setup" method="post" class="d-inline" onsubmit="return confirm('Run setup script to reinstall Nginx and dependencies?');">
+      <button type="submit" class="btn btn-outline-secondary mb-3 ms-2">Setup</button>
+    </form>
+    <form action="/nuke" method="post" class="d-inline" onsubmit="return confirm('Remove all sites and uninstall Nginx? This cannot be undone.');">
+      <button type="submit" class="btn btn-danger mb-3 ms-2">Nuclear Option</button>
+    </form>
     <table class="table table-bordered table-striped">
         <tr>
             <th>Domain</th>
