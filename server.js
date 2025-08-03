@@ -870,6 +870,36 @@ app.post('/dns', async (req, res) => {
   }
 });
 
+// -------------------------------------------------------------------
+// Setup and nuclear cleanup endpoints
+// -------------------------------------------------------------------
+
+// Run the installation script to reinstall Nginx and project dependencies.
+app.post('/setup', (req, res) => {
+  exec('bash scripts/install.sh', (err, stdout, stderr) => {
+    if (err) {
+      // Log any errors produced by the setup script so operators can debug
+      console.error('Setup error:', stderr);
+    } else {
+      console.log(stdout);
+    }
+    res.redirect('/');
+  });
+});
+
+// Destructively remove all sites and uninstall Nginx via the nuke script.
+app.post('/nuke', (req, res) => {
+  exec('bash scripts/nuke.sh', (err, stdout, stderr) => {
+    if (err) {
+      // Surface errors from the nuke script; at this point the system may be in a partial state.
+      console.error('Nuke error:', stderr);
+    } else {
+      console.log(stdout);
+    }
+    res.redirect('/');
+  });
+});
+
 // Render the SSL configuration form for a specific domain
 app.get('/ssl/:domain', (req, res) => {
   const { domain } = req.params;
