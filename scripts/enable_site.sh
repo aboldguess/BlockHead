@@ -53,6 +53,11 @@ if [ ! -f "$SOURCE" ]; then
   exit 1
 fi
 
+# Ensure nginx directory structure exists. On a fresh install the
+# /etc/nginx/sites-available and sites-enabled folders may be missing.
+# mkdir -p creates them if necessary and does nothing if they already exist.
+sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+
 # Copy config to nginx directory
 cp "$SOURCE" "$TARGET"
 # Create or update symlink in sites-enabled
